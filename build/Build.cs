@@ -31,6 +31,7 @@ partial class Build : NukeBuild
 
     const string MainBranch = "main";
     const string DevelopBranch = "develop";
+    const string FeatureBranchPrefix = "feature";
 
     Target Clean => _ => _
         .Description("Cleans the output, bin and obj directories.")
