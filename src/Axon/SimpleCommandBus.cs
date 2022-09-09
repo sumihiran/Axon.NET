@@ -47,7 +47,6 @@ public class SimpleCommandBus : ICommandBus
         where TCommand : class
     {
         // TODO: Check for duplicates
-        // TODO: Return registration
         _ = this.subscriptions.GetOrAdd(commandName, (MessageHandler<object>)(object)handler);
         return Task.FromResult(
             (IAsyncDisposable)new Registration(() => this.subscriptions.Remove(commandName, out _)));
