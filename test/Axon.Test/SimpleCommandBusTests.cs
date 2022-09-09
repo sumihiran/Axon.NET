@@ -10,7 +10,7 @@ public class SimpleCommandBusTests
     public async Task
         SendAsync_Given_NoHandlerSubscribed_Should_ThrowNoHandlerForCommandException_When_CommandDispatched()
     {
-        var command = string.Empty;
+        var command = new object();
         var exception = await Assert.ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.SendAsync(command))
             .ConfigureAwait(false);
         Assert.Contains(command.GetType().Name, exception.Message);
@@ -20,7 +20,7 @@ public class SimpleCommandBusTests
     public async Task Should_ThrowNoHandlerForCommandException_When_HandlerUnsubscribed()
     {
         // Arrange
-        var command = string.Empty;
+        var command = new object();
 
         var commandHandlerMock = new Mock<MessageHandler<object>>();
         var commandHandler = commandHandlerMock.Object;
@@ -44,10 +44,11 @@ public class SimpleCommandBusTests
         // Arrange
         var commandHandlerMock = new Mock<MessageHandler<object>>();
         var commandHandler = commandHandlerMock.Object;
-        var command = string.Empty;
-        await this.commandBus.SubscribeAsync(command.GetType().FullName!, commandHandler).ConfigureAwait(true);
+        var command = new object();
 
         // Act
+        await this.commandBus.SubscribeAsync(command.GetType().FullName!, commandHandler).ConfigureAwait(true);
+
         await this.commandBus.SendAsync(command).ConfigureAwait(true);
 
         // Assert
@@ -59,10 +60,10 @@ public class SimpleCommandBusTests
     {
         // Arrange
         var command = new Ping();
-        await this.commandBus.SubscribeAsync(command.GetType().FullName!, new PingCommandHandler())
-            .ConfigureAwait(true);
 
         // Act
+        await this.commandBus.SubscribeAsync(command.GetType().FullName!, new PingCommandHandler())
+            .ConfigureAwait(true);
         var result = await this.commandBus.SendAsync<Pong>(command).ConfigureAwait(true);
 
         // Assert
