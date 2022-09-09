@@ -16,6 +16,29 @@ public class SimpleCommandBusTests
     }
 
     [Fact]
+    public async Task Should_ThrowNoHandlerForCommandException_When_HandlerUnsubscribed()
+    {
+        // Arrange
+        var commandBus = new SimpleCommandBus();
+        var command = string.Empty;
+
+        var commandHandlerMock = new Mock<MessageHandler<object>>();
+        var commandHandler = commandHandlerMock.Object;
+
+        // Act
+        var registration = await commandBus.SubscribeAsync(command.GetType().FullName!, commandHandler)
+            .ConfigureAwait(false);
+        await commandBus.SendAsync(command).ConfigureAwait(false);
+        await registration.DisposeAsync().ConfigureAwait(false);
+        var exception = await Assert.ThrowsAsync<NoHandlerForCommandException>(() => commandBus.SendAsync(command))
+            .ConfigureAwait(false);
+
+        // Assert
+        commandHandlerMock.Verify(_ => _.HandleAsync(command), Times.Once);
+        Assert.Contains(command.GetType().Name, exception.Message);
+    }
+
+    [Fact]
     public async Task SendAsync_Should_InvokeCommandHandler_WhenCommandDispatched()
     {
         // Arrange

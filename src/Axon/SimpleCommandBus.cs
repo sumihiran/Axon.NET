@@ -43,13 +43,14 @@ public class SimpleCommandBus
     /// <param name="handler">The handler instance that handles the given type of command.</param>
     /// <typeparam name="TCommand">The type of payload of the command.</typeparam>
     /// <returns>>A task that represents the asynchronous subscribe operation.</returns>
-    public Task SubscribeAsync<TCommand>(string commandName, MessageHandler<TCommand> handler)
+    public Task<IAsyncDisposable> SubscribeAsync<TCommand>(string commandName, MessageHandler<TCommand> handler)
         where TCommand : class
     {
         // TODO: Check for duplicates
         // TODO: Return registration
         _ = this.subscriptions.GetOrAdd(commandName, (MessageHandler<object>)(object)handler);
-        return Task.CompletedTask;
+        return Task.FromResult(
+            (IAsyncDisposable)new Registration(() => this.subscriptions.Remove(commandName, out _)));
     }
 
     /// <summary>
@@ -67,4 +68,18 @@ public class SimpleCommandBus
 
     private MessageHandler<object>? FindCommandHandlerFor(string commandName) =>
         this.subscriptions.GetValueOrDefault(commandName);
+
+    private class Registration : IAsyncDisposable
+    {
+        private readonly Action unsubscribeAction;
+
+        public Registration(Action unsubscribeAction) => this.unsubscribeAction = unsubscribeAction;
+
+        /// <inheritdoc />
+        public ValueTask DisposeAsync()
+        {
+            this.unsubscribeAction.Invoke();
+            return ValueTask.CompletedTask;
+        }
+    }
 }
