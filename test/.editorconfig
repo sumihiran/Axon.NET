@@ -38,3 +38,17 @@ dotnet_diagnostic.CA1062.severity = none
 # Justification: Test method names contain underscores
 # https://docs.microsoft.com/en-us/visualstudio/code-quality/ca1707
 dotnet_diagnostic.CA1707.severity = none
+
+# VSTHRD200: Use "Async" suffix in names of methods that return an awaitable type
+# Justification: Test method names are not required to have "Async" suffix
+dotnet_diagnostic.VSTHRD200.severity = none
+
+[GlobalUsings.cs]
+# IDE0065: Using directives must be placed inside of a namespace declaration
+# Justification: Global using directive cannot be used in a namespace declaration
+
+# https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0065
+dotnet_diagnostic.IDE0065.severity = none
+
+# https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/documentation/SA1200.md
+dotnet_diagnostic.SA1200.severity = none
