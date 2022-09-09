@@ -4,7 +4,63 @@ using Moq;
 
 public class SimpleCommandBusTests
 {
-    private readonly ICommandBus commandBus = new SimpleCommandBus();
+    private static readonly Mock<IDuplicateCommandHandlerResolver> DuplicateCommandHandlerResolverMock = new();
+    private readonly ICommandBus commandBus = new SimpleCommandBus(DuplicateCommandHandlerResolverMock.Object);
+
+    [Fact]
+    public async Task Should_InvokeDuplicateCommandHandlerResolver_When_DuplicateCommandHandlerSubscribed()
+    {
+        // Arrange
+        var command = new object();
+        var commandName = command.GetType().FullName!;
+        var initialHandlerMock = new Mock<MessageHandler<object>>();
+        var duplicateHandlerMock = new Mock<MessageHandler<object>>();
+        DuplicateCommandHandlerResolverMock
+            .Setup(r => r.Resolve(commandName, initialHandlerMock.Object, duplicateHandlerMock.Object))
+            .Returns(initialHandlerMock.Object);
+
+        // Act
+        // Subscribe the initial handler
+        await this.commandBus.SubscribeAsync(commandName, initialHandlerMock.Object).ConfigureAwait(false);
+
+        // Then, subscribe a duplicate
+        await this.commandBus.SubscribeAsync(commandName, duplicateHandlerMock.Object).ConfigureAwait(false);
+
+        // And after sending a test command, it should be handled by the initial handler
+        await this.commandBus.SendAsync(command).ConfigureAwait(false);
+
+        // Assert
+        initialHandlerMock.Verify(_ => _.HandleAsync(command), Times.Once);
+        DuplicateCommandHandlerResolverMock.Verify(
+            _ => _.Resolve(commandName, initialHandlerMock.Object, duplicateHandlerMock.Object), Times.Once);
+    }
+
+    [Fact]
+    public async Task Should_InvokeExpectedHandler_When_DuplicateCommandHandlerSubscribed()
+    {
+        // Arrange
+        var command = new object();
+        var commandName = command.GetType().FullName!;
+        var initialHandlerMock = new Mock<MessageHandler<object>>();
+        var duplicateHandlerMock = new Mock<MessageHandler<object>>();
+        var expectedHandlerMock = new Mock<MessageHandler<object>>();
+
+        DuplicateCommandHandlerResolverMock
+            .Setup(r => r.Resolve(commandName, initialHandlerMock.Object, duplicateHandlerMock.Object))
+            .Returns(expectedHandlerMock.Object);
+
+        // Act
+        await this.commandBus.SubscribeAsync(commandName, initialHandlerMock.Object).ConfigureAwait(false);
+        await this.commandBus.SubscribeAsync(commandName, duplicateHandlerMock.Object).ConfigureAwait(false);
+
+        // And after sending a test command, it should be handled by the expected handler
+        await this.commandBus.SendAsync(command).ConfigureAwait(false);
+
+        // Assert
+        initialHandlerMock.Verify(_ => _.HandleAsync(command), Times.Never);
+        duplicateHandlerMock.Verify(_ => _.HandleAsync(command), Times.Never);
+        expectedHandlerMock.Verify(_ => _.HandleAsync(command), Times.Once);
+    }
 
     [Fact]
     public async Task

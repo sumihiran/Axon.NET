@@ -8,6 +8,15 @@ using System.Collections.Concurrent;
 public class SimpleCommandBus : ICommandBus
 {
     private readonly ConcurrentDictionary<string, MessageHandler<object>> subscriptions = new();
+    private readonly IDuplicateCommandHandlerResolver duplicateCommandHandlerResolver;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SimpleCommandBus"/> class.
+    /// </summary>
+    /// <param name="duplicateCommandHandlerResolver"><see cref="IDuplicateCommandHandlerResolver"/> used to resolves
+    /// the road to take when a duplicate command handler is subscribed.</param>
+    public SimpleCommandBus(IDuplicateCommandHandlerResolver duplicateCommandHandlerResolver) =>
+        this.duplicateCommandHandlerResolver = duplicateCommandHandlerResolver;
 
     /// <summary>
     /// Asynchronously send the given <paramref name="command"/> to a single handler the CommandHandler subscribed to
@@ -46,8 +55,13 @@ public class SimpleCommandBus : ICommandBus
     public Task<IAsyncDisposable> SubscribeAsync<TCommand>(string commandName, MessageHandler<TCommand> handler)
         where TCommand : class
     {
-        // TODO: Check for duplicates
-        _ = this.subscriptions.GetOrAdd(commandName, (MessageHandler<object>)(object)handler);
+        var commandHandler = (MessageHandler<object>)(object)handler;
+        _ = this.subscriptions.AddOrUpdate(
+            commandName,
+            _ => commandHandler,
+            (_, existingHandler) =>
+                this.duplicateCommandHandlerResolver.Resolve(commandName, existingHandler, commandHandler));
+
         return Task.FromResult(
             (IAsyncDisposable)new Registration(() => this.subscriptions.Remove(commandName, out _)));
     }
