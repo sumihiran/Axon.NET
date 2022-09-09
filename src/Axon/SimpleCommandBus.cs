@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 /// <summary>
 /// Implementation of the CommandBus that dispatches commands to the handlers subscribed to that specific command's name.
 /// </summary>
-public class SimpleCommandBus
+public class SimpleCommandBus : ICommandBus
 {
     private readonly ConcurrentDictionary<string, MessageHandler<object>> subscriptions = new();
 

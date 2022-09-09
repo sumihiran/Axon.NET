@@ -4,13 +4,14 @@ using Moq;
 
 public class SimpleCommandBusTests
 {
+    private readonly ICommandBus commandBus = new SimpleCommandBus();
+
     [Fact]
     public async Task
         SendAsync_Given_NoHandlerSubscribed_Should_ThrowNoHandlerForCommandException_When_CommandDispatched()
     {
-        var commandBus = new SimpleCommandBus();
         var command = string.Empty;
-        var exception = await Assert.ThrowsAsync<NoHandlerForCommandException>(() => commandBus.SendAsync(command))
+        var exception = await Assert.ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.SendAsync(command))
             .ConfigureAwait(false);
         Assert.Contains(command.GetType().Name, exception.Message);
     }
@@ -19,18 +20,17 @@ public class SimpleCommandBusTests
     public async Task Should_ThrowNoHandlerForCommandException_When_HandlerUnsubscribed()
     {
         // Arrange
-        var commandBus = new SimpleCommandBus();
         var command = string.Empty;
 
         var commandHandlerMock = new Mock<MessageHandler<object>>();
         var commandHandler = commandHandlerMock.Object;
 
         // Act
-        var registration = await commandBus.SubscribeAsync(command.GetType().FullName!, commandHandler)
+        var registration = await this.commandBus.SubscribeAsync(command.GetType().FullName!, commandHandler)
             .ConfigureAwait(false);
-        await commandBus.SendAsync(command).ConfigureAwait(false);
+        await this.commandBus.SendAsync(command).ConfigureAwait(false);
         await registration.DisposeAsync().ConfigureAwait(false);
-        var exception = await Assert.ThrowsAsync<NoHandlerForCommandException>(() => commandBus.SendAsync(command))
+        var exception = await Assert.ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.SendAsync(command))
             .ConfigureAwait(false);
 
         // Assert
@@ -42,15 +42,13 @@ public class SimpleCommandBusTests
     public async Task SendAsync_Should_InvokeCommandHandler_WhenCommandDispatched()
     {
         // Arrange
-        var commandBus = new SimpleCommandBus();
-
         var commandHandlerMock = new Mock<MessageHandler<object>>();
         var commandHandler = commandHandlerMock.Object;
         var command = string.Empty;
-        await commandBus.SubscribeAsync(command.GetType().FullName!, commandHandler).ConfigureAwait(true);
+        await this.commandBus.SubscribeAsync(command.GetType().FullName!, commandHandler).ConfigureAwait(true);
 
         // Act
-        await commandBus.SendAsync(command).ConfigureAwait(true);
+        await this.commandBus.SendAsync(command).ConfigureAwait(true);
 
         // Assert
         commandHandlerMock.Verify(_ => _.HandleAsync(command), Times.Once);
@@ -60,12 +58,12 @@ public class SimpleCommandBusTests
     public async Task SendAsync_Should_ReturnCommandResult_WhenCommandDispatched()
     {
         // Arrange
-        var commandBus = new SimpleCommandBus();
         var command = new Ping();
-        await commandBus.SubscribeAsync(command.GetType().FullName!, new PingCommandHandler()).ConfigureAwait(true);
+        await this.commandBus.SubscribeAsync(command.GetType().FullName!, new PingCommandHandler())
+            .ConfigureAwait(true);
 
         // Act
-        var result = await commandBus.SendAsync<Pong>(command).ConfigureAwait(true);
+        var result = await this.commandBus.SendAsync<Pong>(command).ConfigureAwait(true);
 
         // Assert
         Assert.NotNull(result);
