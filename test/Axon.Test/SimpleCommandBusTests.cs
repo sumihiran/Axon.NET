@@ -6,7 +6,7 @@ public class SimpleCommandBusTests
 {
     [Fact]
     public async Task
-        SendAsync_Should_ThrowNoHandlerForCommandException_When_CommandDispatched_ForNonSubscribedHandler()
+        SendAsync_Given_NoHandlerSubscribed_Should_ThrowNoHandlerForCommandException_When_CommandDispatched()
     {
         var commandBus = new SimpleCommandBus();
         var command = string.Empty;
