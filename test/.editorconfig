@@ -43,6 +43,10 @@ dotnet_diagnostic.CA1707.severity = none
 # Justification: Test method names are not required to have "Async" suffix
 dotnet_diagnostic.VSTHRD200.severity = none
 
+# VSTHRD111: Use ConfigureAwait(bool)
+# Justification: Test method do not require forced optimization of SynchronizationContext
+dotnet_diagnostic.VSTHRD111.severity = none
+
 [GlobalUsings.cs]
 # IDE0065: Using directives must be placed inside of a namespace declaration
 # Justification: Global using directive cannot be used in a namespace declaration
