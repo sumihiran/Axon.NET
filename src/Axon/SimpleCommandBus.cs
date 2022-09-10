@@ -10,6 +10,12 @@ public class SimpleCommandBus : ICommandBus
     private readonly ConcurrentDictionary<string, MessageHandler<object>> subscriptions = new();
     private readonly IDuplicateCommandHandlerResolver duplicateCommandHandlerResolver;
 
+    // TODO: TransactionManager
+    // TODO: MessageMonitor
+    // TODO: MessageHandlerInterceptors
+    // TODO: DefaultCommandCallback
+    // TODO: Builder
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SimpleCommandBus"/> class.
     /// </summary>
@@ -18,17 +24,8 @@ public class SimpleCommandBus : ICommandBus
     public SimpleCommandBus(IDuplicateCommandHandlerResolver duplicateCommandHandlerResolver) =>
         this.duplicateCommandHandlerResolver = duplicateCommandHandlerResolver;
 
-    /// <summary>
-    /// Asynchronously send the given <paramref name="command"/> to a single handler the CommandHandler subscribed to
-    /// the given <paramref name="command"/>'s name.
-    /// </summary>
-    /// <param name="command">The command to send.</param>
-    /// <typeparam name="TResult">The type of the expected result.</typeparam>
-    /// <returns>A task that represents the send operation. The task result contains the handler response.</returns>
-    /// <exception cref="NoHandlerForCommandException">Thrown when no command handler is registered
-    /// for the given <paramref name="command"/>.
-    /// </exception>
-    public Task<TResult> SendAsync<TResult>(object command)
+    /// <inheritdoc />
+    public Task<TResult> DispatchAsync<TResult>(object command)
     {
         var handler = this.FindCommandHandlerFor(command.GetType().FullName!) ??
                       throw new NoHandlerForCommandException(command);
@@ -36,22 +33,10 @@ public class SimpleCommandBus : ICommandBus
         return this.HandleAsync<object, TResult>(command, handler);
     }
 
-    /// <summary>
-    /// Asynchronously send the given <paramref name="command"/> to a single handler the CommandHandler subscribed to
-    /// the given <paramref name="command"/>'s name via dynamic dispatch.
-    /// <paramref name="command"/>'s name.
-    /// </summary>
-    /// <param name="command">The command to send.</param>
-    /// <returns>A task that represents the asynchronous send operation.</returns>
-    public Task SendAsync(object command) => this.SendAsync<object>(command);
+    /// <inheritdoc />
+    public Task DispatchAsync(object command) => this.DispatchAsync<object>(command);
 
-    /// <summary>
-    /// Subscribe the given <paramref name="handler"/> to commands with given <paramref name="commandName"/>.
-    /// </summary>
-    /// <param name="commandName">The name of the command to subscribe the handler to.</param>
-    /// <param name="handler">The handler instance that handles the given type of command.</param>
-    /// <typeparam name="TCommand">The type of payload of the command.</typeparam>
-    /// <returns>>A task that represents the asynchronous subscribe operation.</returns>
+    /// <inheritdoc />
     public Task<IAsyncDisposable> SubscribeAsync<TCommand>(string commandName, MessageHandler<TCommand> handler)
         where TCommand : class
     {
