@@ -1,10 +1,12 @@
 namespace Axon;
 
+using Axon.Messaging;
+
 /// <summary>
 /// Specification of the mechanism on which the Event Listeners can subscribe for events and event publishers can publish
 /// their events. The event bus dispatches events to all subscribed listeners.
 /// </summary>
-public interface IEventBus : ISubscribableMessageSource<object>
+public interface IEventBus : ISubscribableMessageSource<IEventMessage<object>>
 {
     /// <summary>
     /// Publish a collection of events on this bus (one, or multiple). The events will be dispatched to all subscribed
@@ -15,7 +17,7 @@ public interface IEventBus : ISubscribableMessageSource<object>
     /// </summary>
     /// <param name="events">The collection of events to publish.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task PublishAsync(params object[] events);
+    Task PublishAsync(params IEventMessage<object>[] events);
 
     /// <summary>
     /// Publish a collection of events on this bus (one, or multiple). The events will be dispatched to all subscribed
@@ -26,5 +28,5 @@ public interface IEventBus : ISubscribableMessageSource<object>
     /// </summary>
     /// <param name="events"> The collection of events to publish.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task PublishAsync(List<object> events);
+    Task PublishAsync(List<IEventMessage<object>> events);
 }

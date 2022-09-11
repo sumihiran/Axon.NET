@@ -1,16 +1,17 @@
 namespace Axon;
 
+using Axon.Messaging;
 using Moq;
 
 public class SimpleEventBusTests
 {
-    private static readonly object EventMessage = new();
-    private static readonly List<object> Events = new() { EventMessage };
+    private static readonly GenericEventMessage<object> EventMessage = new(new object());
+    private static readonly List<IEventMessage<object>> Events = new() { EventMessage };
 
     private readonly IEventBus eventBus = new SimpleEventBus();
-    private readonly Mock<Func<List<object>, Task>> listener1 = new();
-    private readonly Mock<Func<List<object>, Task>> listener2 = new();
-    private readonly Mock<Func<List<object>, Task>> listener3 = new();
+    private readonly Mock<Func<List<IEventMessage<object>>, Task>> listener1 = new();
+    private readonly Mock<Func<List<IEventMessage<object>>, Task>> listener2 = new();
+    private readonly Mock<Func<List<IEventMessage<object>>, Task>> listener3 = new();
 
     [Fact]
     public async Task EventIsDispatchedToSubscribedListeners()

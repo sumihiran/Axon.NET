@@ -1,16 +1,17 @@
 namespace Axon;
 
 using System.Collections.Concurrent;
+using Axon.Messaging;
 
 /// <summary>
 /// Implementation of the <see cref="IEventBus"/> that dispatches events in the CallContext that publishes them.
 /// </summary>
 public class SimpleEventBus : IEventBus
 {
-    private readonly ConcurrentDictionary<int, Func<List<object>, Task>> eventProcessors = new();
+    private readonly ConcurrentDictionary<int, Func<List<IEventMessage<object>>, Task>> eventProcessors = new();
 
     /// <inheritdoc />
-    public Task<IAsyncDisposable> SubscribeAsync(Func<List<object>, Task> messageProcessor)
+    public Task<IAsyncDisposable> SubscribeAsync(Func<List<IEventMessage<object>>, Task> messageProcessor)
     {
         // TODO: Log if subscriber is already added.
         _ = this.eventProcessors.TryAdd(messageProcessor.GetHashCode(), messageProcessor);
@@ -20,17 +21,17 @@ public class SimpleEventBus : IEventBus
     }
 
     /// <inheritdoc />
-    public Task PublishAsync(params object[] events) => this.PublishAsync(events.ToList());
+    public Task PublishAsync(params IEventMessage<object>[] events) => this.PublishAsync(events.ToList());
 
     /// <inheritdoc />
-    public Task PublishAsync(List<object> events) => this.ProcessEventsAsync(events);
+    public Task PublishAsync(List<IEventMessage<object>> events) => this.ProcessEventsAsync(events);
 
     /// <summary>
     /// Process given events.
     /// </summary>
     /// <param name="events">Events published to this Event Bus.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    protected virtual async Task ProcessEventsAsync(List<object> events)
+    protected virtual async Task ProcessEventsAsync(List<IEventMessage<object>> events)
     {
         foreach (var eventProcessor in this.eventProcessors.Values.ToList())
         {
