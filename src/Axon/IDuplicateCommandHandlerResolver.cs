@@ -1,5 +1,7 @@
 namespace Axon;
 
+using Axon.Messaging;
+
 /// <summary>
 /// As such it ingests two <see cref="MessageHandler{T}"/>instances and returns another one as the resolution.
 /// </summary>
@@ -16,5 +18,8 @@ public interface IDuplicateCommandHandlerResolver
     /// <returns>The resolved {@link MessageHandler}. Could be the <paramref name="registeredHandler"/>,
     /// the <paramref name="candidateHandler"/> or another handler entirely.</returns>
     /// <exception cref="InvalidOperationException">When registration operation should fail.</exception>
-    MessageHandler<object> Resolve(string commandName, MessageHandler<object> registeredHandler, MessageHandler<object> candidateHandler);
+    MessageHandler<ICommandMessage<object>> Resolve(
+        string commandName,
+        MessageHandler<ICommandMessage<object>> registeredHandler,
+        MessageHandler<ICommandMessage<object>> candidateHandler);
 }
