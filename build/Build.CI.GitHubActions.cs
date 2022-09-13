@@ -9,7 +9,8 @@ using Nuke.Common.CI.GitHubActions;
     OnPullRequestBranches = new[] { DevelopBranch, MainBranch },
     PublishArtifacts = true,
     CacheKeyFiles = new[] { "global.json", "src/**/*.csproj" },
-    EnableGitHubToken = true)]
+    EnableGitHubToken = true,
+    AutoGenerate = false)]
 partial class Build
 {
 
