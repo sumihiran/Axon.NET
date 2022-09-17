@@ -19,7 +19,6 @@ public class SimpleCommandBusTests
 
     private static string CommandName => Command.CommandName;
 
-
     [Fact]
     public async Task
         DispatchAsync_Given_NoHandlerSubscribed_When_CommandDispatched_Then_ThrowNoHandlerForCommandException()
