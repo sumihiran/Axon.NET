@@ -8,7 +8,7 @@ using Axon.Messaging;
 /// </summary>
 public class SimpleCommandBus : ICommandBus
 {
-    private readonly ConcurrentDictionary<string, MessageHandler<ICommandMessage<object>>> subscriptions = new();
+    private readonly ConcurrentDictionary<string, IMessageHandler> subscriptions = new();
     private readonly IDuplicateCommandHandlerResolver duplicateCommandHandlerResolver;
 
     // TODO: TransactionManager
@@ -26,24 +26,27 @@ public class SimpleCommandBus : ICommandBus
         this.duplicateCommandHandlerResolver = duplicateCommandHandlerResolver;
 
     /// <inheritdoc />
-    public Task<TResult> DispatchAsync<TResult>(ICommandMessage<object> command)
+    public Task<TResult?> DispatchAsync<TResult>(ICommandMessage<object> command)
     {
-        var handler = this.FindCommandHandlerFor(command.CommandName) ??
-                      throw new NoHandlerForCommandException(
-                          $"No handler was subscribed to command {command.CommandName}");
+        var handler = this.FindCommandHandlerFor(command.CommandName);
+
+        if (handler is null || !handler.CanHandle(command))
+        {
+            throw new NoHandlerForCommandException(
+                $"No handler was subscribed to command {command.CommandName}");
+        }
 
         return this.HandleAsync<TResult>(command, handler);
     }
 
     /// <inheritdoc />
-    public Task DispatchAsync<TCommand>(ICommandMessage<TCommand> command)
-        where TCommand : class => this.DispatchAsync<object>(command);
+    public Task DispatchAsync(ICommandMessage<object> command)
+        => this.DispatchAsync<object>(command);
 
     /// <inheritdoc />
-    public Task<IAsyncDisposable> SubscribeAsync<TCommand>(string commandName, MessageHandler<TCommand> handler)
-        where TCommand : ICommandMessage<object>
+    public Task<IAsyncDisposable> SubscribeAsync(string commandName, IMessageHandler handler)
     {
-        var commandHandler = (MessageHandler<ICommandMessage<object>>)(object)handler;
+        var commandHandler = handler;
         _ = this.subscriptions.AddOrUpdate(
             commandName,
             _ => commandHandler,
@@ -61,12 +64,12 @@ public class SimpleCommandBus : ICommandBus
     /// <param name="handler">The handler that must be invoked for this command.</param>
     /// <typeparam name="TResult">The type of result expected from the command handler.</typeparam>
     /// <returns>The result of the message handling.</returns>
-    protected virtual async Task<TResult> HandleAsync<TResult>(
+    protected virtual async Task<TResult?> HandleAsync<TResult>(
         ICommandMessage<object> command,
-        MessageHandler<ICommandMessage<object>> handler)
-        => (TResult)await handler.HandleAsync(command).ConfigureAwait(false);
+        IMessageHandler handler)
+        => (TResult?)await handler.HandleAsync(command).ConfigureAwait(false);
 
-    private MessageHandler<ICommandMessage<object>>? FindCommandHandlerFor(string commandName) =>
+    private IMessageHandler? FindCommandHandlerFor(string commandName) =>
         this.subscriptions.GetValueOrDefault(commandName);
 
     private class Registration : IAsyncDisposable
