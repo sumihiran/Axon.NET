@@ -12,7 +12,7 @@ public class GenericMessage<TPayload> : AbstractMessage<TPayload>
     /// <paramref name="payload"/>.
     /// </summary>
     /// <param name="payload">The payload for the message.</param>
-    public GenericMessage(TPayload payload)
+    public GenericMessage(TPayload? payload)
         : this(payload, MetaData.EmptyInstance)
     {
     }
@@ -23,8 +23,8 @@ public class GenericMessage<TPayload> : AbstractMessage<TPayload>
     /// </summary>
     /// <param name="payload">The payload for the message as a generic <typeparamref name="TPayload"/>.</param>
     /// <param name="metaData">The metadata <see cref="ICollection{T}"/> for the message.</param>
-    public GenericMessage(TPayload payload, ICollection<KeyValuePair<string, object>> metaData)
-        : this(payload.GetType(), payload, metaData)
+    public GenericMessage(TPayload? payload, ICollection<KeyValuePair<string, object>> metaData)
+        : this(GenericMessage.GetDeclaredPayloadType(payload), payload, metaData)
     {
     }
 
@@ -37,7 +37,7 @@ public class GenericMessage<TPayload> : AbstractMessage<TPayload>
     /// <param name="metaData">The metadata <see cref="ICollection{T}"/> for the message.</param>
     public GenericMessage(
         Type declaredPayloadType,
-        TPayload payload,
+        TPayload? payload,
         ICollection<KeyValuePair<string, object>> metaData)
         : this(Guid.NewGuid().ToString("D"), declaredPayloadType, payload, metaData)
     {
@@ -50,8 +50,8 @@ public class GenericMessage<TPayload> : AbstractMessage<TPayload>
     /// <param name="identifier">The identifier of the Message.</param>
     /// <param name="payload">The payload for the message.</param>
     /// <param name="metaData">The MetaData for the message.</param>
-    public GenericMessage(string identifier, TPayload payload, ICollection<KeyValuePair<string, object>> metaData)
-        : this(identifier, payload.GetType(), payload, metaData)
+    public GenericMessage(string identifier, TPayload? payload, ICollection<KeyValuePair<string, object>> metaData)
+        : this(identifier, GenericMessage.GetDeclaredPayloadType(payload), payload, metaData)
     {
     }
 
@@ -65,7 +65,7 @@ public class GenericMessage<TPayload> : AbstractMessage<TPayload>
     public GenericMessage(
         string identifier,
         Type declaredPayloadType,
-        TPayload payload,
+        TPayload? payload,
         ICollection<KeyValuePair<string, object>> metaData)
         : base(identifier)
     {
@@ -86,7 +86,7 @@ public class GenericMessage<TPayload> : AbstractMessage<TPayload>
     public override MetaData MetaData { get; }
 
     /// <inheritdoc />
-    public override TPayload Payload { get; }
+    public override TPayload? Payload { get; }
 
     /// <inheritdoc />
     public override Type PayloadType { get; }

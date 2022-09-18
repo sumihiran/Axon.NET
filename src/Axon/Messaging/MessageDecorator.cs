@@ -26,7 +26,7 @@ public abstract class MessageDecorator<TPayload> : IMessage<TPayload>
     public MetaData MetaData => this.Message.MetaData;
 
     /// <inheritdoc />
-    public TPayload Payload => this.Message.Payload;
+    public TPayload? Payload => this.Message.Payload;
 
     /// <inheritdoc />
     public Type PayloadType => this.Message.PayloadType;

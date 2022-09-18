@@ -21,7 +21,7 @@ public interface IMessage<out TPayload>
     /// <summary>
     /// Gets the payload of this message. The payload is the application-specific information.
     /// </summary>
-    TPayload Payload { get; }
+    TPayload? Payload { get; }
 
     /// <summary>
     /// Gets the type of the payload.

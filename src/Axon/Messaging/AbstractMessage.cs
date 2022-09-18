@@ -20,7 +20,7 @@ public abstract class AbstractMessage<TPayload> : IMessage<TPayload>
     public abstract MetaData MetaData { get; }
 
     /// <inheritdoc />
-    public abstract TPayload Payload { get; }
+    public abstract TPayload? Payload { get; }
 
     /// <inheritdoc />
     public abstract Type PayloadType { get; }
