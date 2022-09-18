@@ -359,3 +359,6 @@ output/
 # JetBrains Rider
 .idea
 *.sln.iml
+
+# SonarQube
+.sonarqube

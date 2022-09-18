@@ -10,13 +10,13 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Package">
-    <Authors>Project Author</Authors>
-    <Company>Project Author</Company>
-    <Copyright>Copyright © Project Author. All rights Reserved</Copyright>
+    <Authors>Nuwan Sumihiran</Authors>
+    <Company>Nuwan Sumihiran</Company>
+    <Copyright>Copyright © Nuwan Sumihiran. All rights Reserved</Copyright>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/sumihiran/Axon.NET</PackageProjectUrl>
-    <PackageIcon>Icon.png</PackageIcon>
+<!--    <PackageIcon>Icon.png</PackageIcon>-->
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/sumihiran/Axon.NET.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

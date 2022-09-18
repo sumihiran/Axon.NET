@@ -1,8 +1,26 @@
 # Axon.NET
 
-[![Axon NuGet Package](https://img.shields.io/nuget/v/Axon.svg)](https://www.nuget.org/packages/Axon/) [![Axon NuGet Package Downloads](https://img.shields.io/nuget/dt/Axon)](https://www.nuget.org/packages/Axon) [![GitHub Actions Status](https://github.com/sumihiran/Axon.NET/workflows/Build/badge.svg?branch=main)](https://github.com/sumihiran/Axon.NET/actions)
+**Axon.NET** is a port of the popular Java based [AxonFramework](https://github.com/AxonFramework/AxonFramework) for building Evolutionary Event-Driven Microservices in .NET.
 
-[![GitHub Actions Build History](https://buildstats.info/github/chart/sumihiran/Axon.NET?branch=main&includeBuildsFromPullRequest=false)](https://github.com/sumihiran/Axon.NET/actions)
+The framework provides the necessary building blocks to follow principles of Domain Driven Design, Command-Query Responsibility Segregation (CQRS), and Event Sourcing while incorporating async/await.
+This implementation promise to maintain a similar API to that of the Java implementation, allowing you to refer to the official [AxonFramework Reference Guide](https://docs.axoniq.io/reference-guide/) for the time being.
+
+## Build Status
+
+| Branch  | Status                                                                                                                                                       |
+|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Release | [WIP]                                                                                                                                                        |
+| Develop | [![Build Status](https://github.com/sumihiran/Axon.NET/actions/workflows/build.yml/badge.svg?branch=develop)](https://github.com/sumihiran/Axon.NET/actions) |
 
 
-Port of Axon Framework for .NET
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## Authors
+
+* **Nuwan Sumihiran** - *Initial work* - [Sumihiran](https://github.com/sumihiran/)
+
+## Thanks
+
+Many thanks to [AxonIQ](https://www.axoniq.io/) who provide an [Open Source License](https://github.com/AxonFramework/AxonFramework/blob/master/LICENSE.txt) for this project :heart:.

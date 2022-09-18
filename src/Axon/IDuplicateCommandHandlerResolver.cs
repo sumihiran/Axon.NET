@@ -1,7 +1,9 @@
 namespace Axon;
 
+using Axon.Messaging;
+
 /// <summary>
-/// As such it ingests two <see cref="MessageHandler{T}"/>instances and returns another one as the resolution.
+/// As such it ingests two <see cref="IMessageHandler"/> instances and returns another one as the resolution.
 /// </summary>
 public interface IDuplicateCommandHandlerResolver
 {
@@ -10,11 +12,11 @@ public interface IDuplicateCommandHandlerResolver
     /// command handling, or otherwise throwing an exception to reject registration altogether.
     /// </summary>
     /// <param name="commandName">The name of the Command for which the duplicate was detected.</param>
-    /// <param name="registeredHandler">The <see cref="MessageHandler{T}"/> previously registered with the Command Bus.</param>
-    /// <param name="candidateHandler">The <see cref="MessageHandler{T}"/>  that is newly registered and conflicts with
+    /// <param name="registeredHandler">The <see cref="IMessageHandler"/> previously registered with the Command Bus.</param>
+    /// <param name="candidateHandler">The <see cref="IMessageHandler"/>  that is newly registered and conflicts with
     /// the existing registration.</param>
-    /// <returns>The resolved {@link MessageHandler}. Could be the <paramref name="registeredHandler"/>,
+    /// <returns>The resolved <see cref="IMessageHandler"/>. Could be the <paramref name="registeredHandler"/>,
     /// the <paramref name="candidateHandler"/> or another handler entirely.</returns>
     /// <exception cref="InvalidOperationException">When registration operation should fail.</exception>
-    MessageHandler<object> Resolve(string commandName, MessageHandler<object> registeredHandler, MessageHandler<object> candidateHandler);
+    IMessageHandler Resolve(string commandName, IMessageHandler registeredHandler, IMessageHandler candidateHandler);
 }

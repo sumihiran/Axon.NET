@@ -1,8 +1,8 @@
 namespace Axon.Messaging;
 
 /// <summary>
-/// Abstract implementation of a {@link Message} that delegates to an existing message. Extend this decorator class to
-/// extend the message with additional features.
+/// Abstract implementation of a <see cref="IMessage{TPayload}"/> that delegates to an existing message. Extend this
+/// decorator class to extend the message with additional features.
 /// </summary>
 /// <typeparam name="TPayload">The type of payload contained in this Message.</typeparam>
 public abstract class MessageDecorator<TPayload> : IMessage<TPayload>
