@@ -28,14 +28,5 @@ public class GenericMessageTests
         Assert.Equal(payload, message.Payload);
     }
 
-    [Fact]
-    public void Should_ReturnVoidTypeAsPayloadType_When_PayloadIsNullable()
-    {
-        string? payload = null;
-        var message = GenericMessage.AsMessage(payload);
-
-        Assert.Equal(typeof(void), message.PayloadType);
-    }
-
     public record Message;
 }
