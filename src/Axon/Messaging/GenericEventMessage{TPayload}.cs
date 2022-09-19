@@ -53,7 +53,7 @@ public class GenericEventMessage<TPayload> : MessageDecorator<TPayload>, IEventM
     public DateTime Timestamp { get; }
 
     /// <inheritdoc />
-    public override IMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData)
+    public override GenericEventMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData)
     {
         if (this.MetaData.Equals(metaData))
         {
@@ -64,7 +64,7 @@ public class GenericEventMessage<TPayload> : MessageDecorator<TPayload>, IEventM
     }
 
     /// <inheritdoc />
-    public override IMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData)
+    public override GenericEventMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData)
     {
         if (metaData.IsEmpty() || this.MetaData.Equals(metaData))
         {

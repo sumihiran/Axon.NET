@@ -56,16 +56,12 @@ public class GenericQueryMessage<TPayload, TResponse> : MessageDecorator<TPayloa
     public IResponseType<TResponse> ResponseType { get; }
 
     /// <inheritdoc />
-    public override IMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
-        new GenericQueryMessage<TPayload, TResponse>(
-            this.Message.WithMetaData(metaData),
-            this.QueryName,
-            this.ResponseType);
+    public override GenericQueryMessage<TPayload, TResponse> WithMetaData(
+        ICollection<KeyValuePair<string, object>> metaData) =>
+        new(this.Message.WithMetaData(metaData), this.QueryName, this.ResponseType);
 
     /// <inheritdoc />
-    public override IMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
-        new GenericQueryMessage<TPayload, TResponse>(
-            this.Message.AndMetaData(metaData),
-            this.QueryName,
-            this.ResponseType);
+    public override GenericQueryMessage<TPayload, TResponse> AndMetaData(
+        ICollection<KeyValuePair<string, object>> metaData) =>
+        new(this.Message.AndMetaData(metaData), this.QueryName, this.ResponseType);
 }
