@@ -89,7 +89,7 @@ public class SimpleCommandBusTests
         // Arrange
         var command = GenericCommandMessage.AsCommandMessage(new Ping());
         var expectedResult = new Pong();
-        var pingCommandHandler = new PingCommandHandler(expectedResult);
+        var pingCommandHandler = new DelegatingCommandHandler<Ping>(_ => Task.FromResult((object?)expectedResult));
 
         // Act
         await using var registration = await this.commandBus.SubscribeAsync(command.CommandName, pingCommandHandler);
@@ -97,7 +97,26 @@ public class SimpleCommandBusTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(expectedResult, result);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expectedResult, result.Payload);
+    }
+
+    [Fact]
+    public async Task Should_ReturnResultWithException_When_HandlerThrowsException()
+    {
+        // Arrange
+        var sut = this.commandBus;
+        var expectedException = new ErrorException("fail");
+        var failHandler = new DelegatingCommandHandler<object>(_ => throw expectedException);
+
+        // Act
+        await using var registration = await sut.SubscribeAsync(CommandName, failHandler);
+        var result = await sut.DispatchAsync<object>(Command);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.IsSuccess);
+        Assert.Equal(expectedException, result.Exception);
     }
 
     [Fact]
@@ -154,6 +173,35 @@ public class SimpleCommandBusTests
         expectedHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Once);
     }
 
+    [Fact]
+    public async Task DispatchAsync_FireAndForget_Should_ReturnOnceDispatched()
+    {
+        // Arrange
+        var sut = this.commandBus;
+        var cancellationTokenSource = new CancellationTokenSource();
+        var initMonitor = new SemaphoreSlim(1, 1);
+        var completionTask = Task.Delay(TimeSpan.FromMinutes(1), cancellationTokenSource.Token);
+        var commandHandler = new DelegatingCommandHandler<object>(async _ =>
+        {
+            initMonitor.Release(1);
+            completionTask.Start(TaskScheduler.Current);
+            await completionTask.WaitAsync(CancellationToken.None);
+            return null;
+        });
+
+        // Act
+        await initMonitor.WaitAsync(CancellationToken.None);
+        await using var registration = await sut.SubscribeAsync(CommandName, commandHandler);
+
+        await sut.DispatchAsync(Command);
+
+        // completes when monitor released within the handler
+        await initMonitor.WaitAsync(CancellationToken.None);
+
+        // Assert
+        Assert.NotEqual(TaskStatus.RanToCompletion, completionTask.Status);
+    }
+
     private static Mock<MessageHandler<ICommandMessage<object>>> CreateCommandMessageHandlerMock() =>
         new() { CallBase = true };
 
@@ -163,14 +211,22 @@ public class SimpleCommandBusTests
     {
     }
 
-    private class PingCommandHandler : MessageHandler<ICommandMessage<Ping>>
+    private class ErrorException : Exception
     {
-        private readonly Pong response;
+        public ErrorException(string? message)
+            : base(message)
+        {
+        }
+    }
 
-        public PingCommandHandler(Pong response) => this.response = response;
+    private class DelegatingCommandHandler<TPayload> : MessageHandler<ICommandMessage<TPayload>>
+        where TPayload : class
+    {
+        private readonly Func<ICommandMessage<TPayload>, Task<object?>> handleAction;
 
-        /// <inheritdoc />
-        public override Task<object?> HandleAsync(ICommandMessage<Ping> message) =>
-            Task.FromResult((object?)this.response);
+        public DelegatingCommandHandler(Func<ICommandMessage<TPayload>, Task<object?>> handleAction) =>
+            this.handleAction = handleAction;
+
+        public override Task<object?> HandleAsync(ICommandMessage<TPayload> message) => this.handleAction(message);
     }
 }

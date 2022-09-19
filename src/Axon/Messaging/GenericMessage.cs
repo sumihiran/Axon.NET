@@ -5,8 +5,6 @@ namespace Axon.Messaging;
 /// </summary>
 public static class GenericMessage
 {
-    private static readonly Type GenericMessageType = typeof(GenericMessage<>);
-
     /// <summary>
     /// Returns a Message representing the given <paramref name="payload"/>, either by wrapping it or
     /// by returning it as-is.
@@ -25,19 +23,19 @@ public static class GenericMessage
             return message;
         }
 
-        var messageType = GenericMessageType.MakeGenericType(payload.GetType());
+        var messageType = typeof(GenericMessage<>).MakeGenericType(payload.GetType());
         return (IMessage<object>)Activator.CreateInstance(messageType, args: new[] { payload })!;
     }
 
     /// <summary>
-    /// Extract the <see cref="Type"/> of the provided <paramref name="payload"/>.
-    /// If {<paramref name="payload"/> == null}, this function returns <see cref="Void"/> as the payload type.
+    /// Extract the <see cref="Type"/> of the provided <paramref name="payload"/>. If <paramref name="payload"/> is
+    /// <c>null</c>, this function returns <see cref="Nullable{T}"/> as the payload type.
     /// </summary>
     /// <param name="payload">The payload of a <see cref="IMessage{TPayload}"/>.</param>
     /// <typeparam name="TPayload">The type of payload.</typeparam>
     /// <returns>The declared type of the given <paramref name="payload"/> or <see cref="Void"/> if
-    /// {<paramref name="payload"/> == null}.</returns>
+    /// <paramref name="payload"/> is <c>null</c>.</returns>
     internal static Type GetDeclaredPayloadType<TPayload>(TPayload? payload)
         where TPayload : class =>
-        payload is null ? typeof(void) : typeof(TPayload);
+        payload?.GetType() ?? typeof(TPayload);
 }
