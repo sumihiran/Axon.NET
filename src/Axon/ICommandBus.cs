@@ -14,14 +14,15 @@ public interface ICommandBus
     /// <paramref name="command"/>'s name. Once the command is processed, the result is returned.
     /// </summary>
     /// <param name="command">The command to dispatch.</param>
-    /// <typeparam name="TResult">The type of the expected result.</typeparam>
+    /// <typeparam name="TResult">The type of result expected from the command handler.</typeparam>
     /// <returns>
     /// A <see cref="Task"/> that represents the dispatch operation. The task result contains the handler response.
     /// </returns>
     /// <exception cref="NoHandlerForCommandException">
     /// Thrown when no command handler is registered for the given <paramref name="command"/>.
     /// </exception>
-    Task<TResult?> DispatchAsync<TResult>(ICommandMessage<object> command);
+    Task<ICommandResultMessage<TResult>> DispatchAsync<TResult>(ICommandMessage<object> command)
+        where TResult : class;
 
     /// <summary>
     /// Asynchronously dispatch the given <paramref name="command"/> to the CommandHandler subscribed the given

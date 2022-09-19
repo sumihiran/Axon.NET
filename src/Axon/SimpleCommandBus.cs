@@ -26,7 +26,8 @@ public class SimpleCommandBus : ICommandBus
         this.duplicateCommandHandlerResolver = duplicateCommandHandlerResolver;
 
     /// <inheritdoc />
-    public Task<TResult?> DispatchAsync<TResult>(ICommandMessage<object> command)
+    public async Task<ICommandResultMessage<TResult>> DispatchAsync<TResult>(ICommandMessage<object> command)
+        where TResult : class
     {
         var handler = this.FindCommandHandlerFor(command.CommandName);
 
@@ -36,12 +37,13 @@ public class SimpleCommandBus : ICommandBus
                 $"No handler was subscribed to command {command.CommandName}");
         }
 
-        return this.HandleAsync<TResult>(command, handler);
+        return GenericCommandResultMessage.AsCommandResultMessage<TResult>(
+            await this.HandleAsync<TResult>(command, handler).ConfigureAwait(false));
     }
 
     /// <inheritdoc />
     public Task DispatchAsync(ICommandMessage<object> command)
-        => this.DispatchAsync<object>(command);
+        => this.DispatchAsync<Unit>(command);
 
     /// <inheritdoc />
     public Task<IAsyncDisposable> SubscribeAsync(string commandName, IMessageHandler handler)
@@ -64,10 +66,43 @@ public class SimpleCommandBus : ICommandBus
     /// <param name="handler">The handler that must be invoked for this command.</param>
     /// <typeparam name="TResult">The type of result expected from the command handler.</typeparam>
     /// <returns>The result of the message handling.</returns>
-    protected virtual async Task<TResult?> HandleAsync<TResult>(
+    protected virtual async Task<IResultMessage<TResult>> HandleAsync<TResult>(
         ICommandMessage<object> command,
         IMessageHandler handler)
-        => (TResult?)await handler.HandleAsync(command).ConfigureAwait(false);
+        where TResult : class
+    {
+        IResultMessage<TResult> resultMessage;
+        try
+        {
+            var handlingTask = handler.HandleAsync(command);
+
+            if (typeof(TResult) == typeof(Unit))
+            {
+                handlingTask.Start(TaskScheduler.Default);
+                return GenericResultMessage.AsResultMessage<TResult>(Unit.Value);
+            }
+
+            var result = await handlingTask.ConfigureAwait(false);
+            if (result is IResultMessage<TResult> checkedResultMessage)
+            {
+                resultMessage = checkedResultMessage;
+            }
+            else if (result is IMessage<TResult> message)
+            {
+                resultMessage = new GenericResultMessage<TResult>(message.Payload, message.MetaData);
+            }
+            else
+            {
+                resultMessage = new GenericResultMessage<TResult>((TResult?)result);
+            }
+        }
+        catch (Exception exception)
+        {
+            resultMessage = GenericResultMessage.AsErrorResultMessage<TResult>(exception);
+        }
+
+        return resultMessage;
+    }
 
     private IMessageHandler? FindCommandHandlerFor(string commandName) =>
         this.subscriptions.GetValueOrDefault(commandName);
