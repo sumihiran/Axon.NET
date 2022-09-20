@@ -48,12 +48,11 @@ public class SimpleCommandBus : ICommandBus
     /// <inheritdoc />
     public Task<IAsyncDisposable> SubscribeAsync(string commandName, IMessageHandler handler)
     {
-        var commandHandler = handler;
         _ = this.subscriptions.AddOrUpdate(
             commandName,
-            _ => commandHandler,
+            _ => handler,
             (_, existingHandler) =>
-                this.duplicateCommandHandlerResolver.Resolve(commandName, existingHandler, commandHandler));
+                this.duplicateCommandHandlerResolver.Resolve(commandName, existingHandler, handler));
 
         return Task.FromResult(
             (IAsyncDisposable)new Registration(() => this.subscriptions.Remove(commandName, out _)));
@@ -78,6 +77,7 @@ public class SimpleCommandBus : ICommandBus
 
             if (typeof(TResult) == typeof(Unit))
             {
+                // TODO: Keep track of tasks
                 handlingTask.Start(TaskScheduler.Default);
                 return GenericResultMessage.AsResultMessage<TResult>(Unit.Value);
             }

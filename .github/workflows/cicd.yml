@@ -1,4 +1,4 @@
-name: "CI"
+name: "Continuous Integration & Delivery"
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -7,13 +7,17 @@ env:
 
 on:
   push:
-    branches: [ develop, main, feature/* ]
-  pull_request:
-    branches: [ develop, main ]
+    branches: [  release ]
+  workflow_dispatch:
+    inputs:
+      publish_nuget_package:
+        description: Publish a new NuGet package?
+        required: false
+        type: boolean
 
 jobs:
   build:
-    name: "Build & Test"
+    name: "Continuous integration"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -41,4 +45,20 @@ jobs:
         with:
           files: ./artifacts/test-coverage/coverage.opencover.xml
           fail_ci_if_error: true
+
+  publish:
+    name: "Continuous Delivery"
+    needs: build
+    environment: production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
+
+      - name: Publish NuGet Package
+        run: ./build.cmd Publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 

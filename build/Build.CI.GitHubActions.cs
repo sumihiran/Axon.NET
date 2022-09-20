@@ -1,4 +1,3 @@
-
 using Nuke.Common.CI.GitHubActions;
 
 [GitHubActions(
@@ -13,5 +12,5 @@ using Nuke.Common.CI.GitHubActions;
     AutoGenerate = false)]
 partial class Build
 {
-
+    static GitHubActions GitHubActions => GitHubActions.Instance;
 }
