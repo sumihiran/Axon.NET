@@ -7,11 +7,10 @@ This implementation promise to maintain a similar API to that of the Java implem
 
 ## Build Status
 
-| Branch  | Status                                                                                                                                                       |
-|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Release | [WIP]                                                                                                                                                        |
-| Develop | [![Build Status](https://github.com/sumihiran/Axon.NET/actions/workflows/build.yml/badge.svg?branch=develop)](https://github.com/sumihiran/Axon.NET/actions) |
-
+| Branch  | Status                                                                                                                                                            |
+|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Release | [![Build Status](https://github.com/sumihiran/Axon.NET/actions/workflows/cicd.yml/badge.svg?branch=release)](https://github.com/sumihiran/Axon.NET/actions)       |
+| Develop | [![Build Status](https://github.com/sumihiran/Axon.NET/actions/workflows/cicd.yml/badge.svg?branch=develop)](https://github.com/sumihiran/Axon.NET/actions/workflows/cicd.yml) |
 
 ## Contributing
 

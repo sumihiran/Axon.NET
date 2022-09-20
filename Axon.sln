@@ -48,7 +48,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\codeql-analysis.yml = .github\workflows\codeql-analysis.yml
 		.github\workflows\release-drafter.yml = .github\workflows\release-drafter.yml
-		.github\workflows\build.yml = .github\workflows\build.yml
+		.github\workflows\cicd.yml = .github\workflows\cicd.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.csproj", "{6DEF6C33-AAAE-4547-A579-333258A0AE23}"

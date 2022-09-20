@@ -1,0 +1,80 @@
+name: "CI"
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+on:
+  push:
+    branches: [ develop, main, release, feature/* ]
+  pull_request:
+    branches: [ develop, main ]
+  workflow_dispatch:
+    inputs:
+      publish_nuget_package:
+        description: Publish a new NuGet package?
+        required: false
+        type: boolean
+
+jobs:
+  build:
+    name: "Build & Test"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
+
+      - name: Cache .nuke/temp, ~/.nuget/packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            .nuke/temp
+            ~/.nuget/packages
+          key: ${{ runner.os }}-${{ hashFiles('global.json', 'src/**/*.csproj') }}
+
+      - name: Run Nuke
+        run: ./build.cmd
+
+      - uses: codecov/codecov-action@v3
+        with:
+          files: ./artifacts/test-coverage/coverage.opencover.xml
+          fail_ci_if_error: true
+
+  publish:
+    name: "Publish"
+    if: ${{ contains(fromJson('["develop", "master", "release"]'), github.ref_name) }}
+
+    needs: build
+    environment: production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
+
+      - name: Cache .nuke/temp, ~/.nuget/packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            .nuke/temp
+            ~/.nuget/packages
+          key: ${{ runner.os }}-${{ hashFiles('global.json', 'src/**/*.csproj') }}
+
+      - name: Publish NuGet Clean Package
+        run: ./build.cmd Publish
+        env:
+          PUBLISH_NUGET_PACKAGE: ${{ inputs.publish_nuget_package }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+

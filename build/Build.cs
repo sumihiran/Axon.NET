@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nuke.Common;
+using Nuke.Common.CI.GitHubActions;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tooling;
@@ -25,22 +26,19 @@ partial class Build : NukeBuild
 
     [Solution] readonly Solution Solution;
     [GitRepository] readonly GitRepository GitRepository;
+    static GitHubActions GitHubActions => GitHubActions.Instance;
 
     static AbsolutePath SourceDirectory => RootDirectory / "src";
     static AbsolutePath TestsDirectory => RootDirectory / "tests";
 
-    static AbsolutePath OutputDirectory => RootDirectory / "output";
-
-    const string MainBranch = "main";
-    const string DevelopBranch = "develop";
-    const string FeatureBranchPrefix = "feature";
+    static AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
 
     Target Clean => _ => _
         .Description("Cleans the output, bin and obj directories.")
         .Before(Restore)
         .Executes(() =>
         {
-            EnsureCleanDirectory(OutputDirectory);
+            EnsureCleanDirectory(ArtifactsDirectory);
             SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
             TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
         });
@@ -61,12 +59,13 @@ partial class Build : NukeBuild
             DotNetBuild(_ => _
                 .SetProjectFile(Solution)
                 .SetNoRestore(InvokedTargets.Contains(Restore))
-                .SetConfiguration(Configuration));
+                .SetConfiguration(Configuration)
+                .EnableNoLogo());
         });
 
-    static AbsolutePath TestResultDirectory => OutputDirectory / "test-results";
+    static AbsolutePath TestResultDirectory => ArtifactsDirectory / "test-results";
 
-    static AbsolutePath CoverageResultDirectory => OutputDirectory / "test-coverage";
+    static AbsolutePath CoverageResultDirectory => ArtifactsDirectory / "test-coverage";
     IEnumerable<Project> TestProjects => Partition.GetCurrent(Solution.GetProjects("*.Tests"));
 
     Target Test => _ => _
