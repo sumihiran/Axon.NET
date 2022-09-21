@@ -14,15 +14,15 @@ public class GenericEventMessageTests
         var message3 = new GenericEventMessage<object>(payload, metaDataMap);
 
         Assert.Equivalent(MetaData.EmptyInstance, message1.MetaData);
-        Assert.Equal(typeof(object), message1.Payload.GetType());
+        Assert.Equal(typeof(object), message1.Payload?.GetType());
         Assert.Equal(typeof(object), message1.PayloadType);
 
         Assert.Equivalent(metaData, message2.MetaData);
-        Assert.Equal(typeof(object), message2.Payload.GetType());
+        Assert.Equal(typeof(object), message2.Payload?.GetType());
         Assert.Equal(typeof(object), message2.PayloadType);
 
         Assert.Equal(metaData, message3.MetaData);
-        Assert.Equal(typeof(object), message3.Payload.GetType());
+        Assert.Equal(typeof(object), message3.Payload?.GetType());
         Assert.Equal(typeof(object), message3.PayloadType);
 
         Assert.False(message1.Identifier.Equals(message2.Identifier, StringComparison.Ordinal));

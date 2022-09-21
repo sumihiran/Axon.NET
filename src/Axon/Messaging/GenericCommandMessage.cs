@@ -51,7 +51,7 @@ public static class GenericCommandMessage
 
         if (command is IMessage<TMessage> message)
         {
-            return new GenericCommandMessage<TMessage>(message.Payload, message.MetaData);
+            return new GenericCommandMessage<TMessage>(message.Payload!, message.MetaData);
         }
 
         return new GenericCommandMessage<TMessage>((TMessage)command, MetaData.EmptyInstance);

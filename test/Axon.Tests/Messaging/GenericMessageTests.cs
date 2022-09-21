@@ -22,10 +22,19 @@ public class GenericMessageTests
     [Fact]
     public void Should_ReturnWrappedMessage_When_ObjectIsProvided()
     {
-        var messagePayload = "payload";
-        var result = GenericMessage.AsMessage(messagePayload);
+        var payload = "payload";
+        var message = GenericMessage.AsMessage(payload);
 
-        Assert.Equal(messagePayload, result.Payload);
+        Assert.Equal(payload, message.Payload);
+    }
+
+    [Fact]
+    public void Should_ReturnVoidTypeAsPayloadType_When_PayloadIsNullable()
+    {
+        string? payload = null;
+        var message = GenericMessage.AsMessage(payload);
+
+        Assert.Equal(typeof(void), message.PayloadType);
     }
 
     public record Message;
