@@ -42,10 +42,18 @@ public class GenericCommandMessage<TPayload> : MessageDecorator<TPayload>, IComm
     public string CommandName { get; }
 
     /// <inheritdoc />
-    public override IMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData)
-        => new GenericCommandMessage<TPayload>(this.Message.WithMetaData(this.MetaData), this.CommandName);
+    ICommandMessage<TPayload> ICommandMessage<TPayload>.
+        WithMetaData(ICollection<KeyValuePair<string, object>> metaData) => this.WithMetaData(metaData);
 
     /// <inheritdoc />
-    public override IMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData)
-        => new GenericCommandMessage<TPayload>(this.Message.AndMetaData(this.MetaData), this.CommandName);
+    ICommandMessage<TPayload> ICommandMessage<TPayload>.
+        AndMetaData(ICollection<KeyValuePair<string, object>> metaData) => this.AndMetaData(metaData);
+
+    /// <inheritdoc />
+    public override GenericCommandMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData)
+        => new(this.Message.WithMetaData(this.MetaData), this.CommandName);
+
+    /// <inheritdoc />
+    public override GenericCommandMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData)
+        => new(this.Message.AndMetaData(this.MetaData), this.CommandName);
 }
