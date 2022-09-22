@@ -34,7 +34,7 @@ public interface IQueryBus
     /// <param name="query">The query.</param>
     /// <typeparam name="TResponse">The type of response expected from this query.</typeparam>
     /// <returns>A <see cref="Task{TResult}"/>  that resolves when the response is available.</returns>
-    Task<TResponse?> QueryAsync<TResponse>(IQueryMessage<object, TResponse> query)
+    Task<IQueryResponseMessage<TResponse>> QueryAsync<TResponse>(IQueryMessage<object, TResponse> query)
         where TResponse : class;
 
     /// <summary>
@@ -48,7 +48,8 @@ public interface IQueryBus
     /// <typeparam name="TResponse">The response type of the query.</typeparam>
     /// <returns>An AsyncEnumerable of the query results.</returns>
     /// TODO: Add deadline
-    IAsyncEnumerable<TResponse?> ScatterGatherAsync<TResponse>(IQueryMessage<object, TResponse> query)
+    IAsyncEnumerable<IQueryResponseMessage<TResponse>> ScatterGatherAsync<TResponse>(
+        IQueryMessage<object, TResponse> query)
         where TResponse : class;
 
     // TODO: Query Subscriptions
