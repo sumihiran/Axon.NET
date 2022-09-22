@@ -48,7 +48,8 @@ public class SimpleQueryBusTest
         var result = await sut.QueryAsync(queryMessage);
 
         // Assert
-        Assert.Equal(9999, result);
+        Assert.NotNull(result);
+        Assert.Equal(9999, result.Payload);
         Assert.Equal(1, invocationCount);
 
         await registration.DisposeAsync();
@@ -60,21 +61,18 @@ public class SimpleQueryBusTest
     {
         // Arrange
         var sut = new SimpleQueryBus();
-        await sut.SubscribeAsync<IQueryMessage<string, string>, string>(
-            typeof(string).FullName!,
-            typeof(string),
-            QueryHandler<string, string>(_ => "expected"));
+        await sut.SubscribeAsync(typeof(string).FullName!, QueryHandler<string, string>(_ => "expected"));
 
-        await (await sut.SubscribeAsync<IQueryMessage<string, string>, string>(
-            typeof(string).FullName!,
-            typeof(string),
-            QueryHandler<string, string>(_ => "not expected"))).DisposeAsync();
+        await (await sut.SubscribeAsync(typeof(string).FullName!, QueryHandler<string, string>(_ => "not expected")))
+            .DisposeAsync();
 
         var queryMessage =
             new GenericQueryMessage<string, string>("request", ResponseTypes.InstanceOf<string>());
         var result = await sut.QueryAsync(queryMessage);
 
-        Assert.Equal("expected", result);
+        Assert.NotNull(result);
+        Assert.True(result.IsSuccess);
+        Assert.Equal("expected", result.Payload);
     }
 
     [Fact]
@@ -106,7 +104,7 @@ public class SimpleQueryBusTest
             new GenericQueryMessage<string, string>("request", ResponseTypes.InstanceOf<string>());
         var stream = sut.ScatterGatherAsync(queryMessage);
 
-        var results = await stream.ToListAsync();
+        var results = await stream.Select(response => response.Payload).ToListAsync();
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -115,12 +113,33 @@ public class SimpleQueryBusTest
         Assert.Contains("AB", results);
     }
 
+    [Fact]
+    public async Task ScatterGatherAsync_Should_IgnoreNullResponses()
+    {
+        // Arrange
+        var sut = new SimpleQueryBus();
+        var queryName = typeof(string).FullName!;
+
+        // Act
+        await sut.SubscribeAsync(queryName, QueryHandler<string, string>(_ => null!));
+        await sut.SubscribeAsync(queryName, QueryHandler<string, string>(_ => "answer"));
+
+        var queryMessage =
+            new GenericQueryMessage<string, string>("request", ResponseTypes.InstanceOf<string>());
+        var stream = sut.ScatterGatherAsync(queryMessage);
+
+        var results = await stream.Select(response => response.Payload).ToListAsync();
+
+        // Assert
+        Assert.Single(results);
+        Assert.Contains("answer", results);
+    }
+
     private static MessageHandler<IQueryMessage<TPayload, TResponse>> QueryHandler<TPayload, TResponse>(
         Func<TPayload, TResponse> call)
         where TPayload : class
         where TResponse : class
-        =>
-        new DelegatingQueryHandler<TPayload, TResponse>(call);
+        => new DelegatingQueryHandler<TPayload, TResponse>(call);
 
     private class DelegatingQueryHandler<TPayload, TResponse> : MessageHandler<IQueryMessage<TPayload, TResponse>>
         where TPayload : class

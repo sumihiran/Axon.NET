@@ -49,7 +49,8 @@ public class SimpleQueryBus : IQueryBus
     }
 
     /// <inheritdoc />
-    public async Task<TResponse?> QueryAsync<TResponse>(IQueryMessage<object, TResponse> query)
+    public async Task<IQueryResponseMessage<TResponse>> QueryAsync<TResponse>(
+        IQueryMessage<object, TResponse> query)
         where TResponse : class
     {
         var handlers = this.GetHandlersForMessage(query);
@@ -61,11 +62,15 @@ public class SimpleQueryBus : IQueryBus
 
         var handler = handlers.First();
 
-        return ConvertResponse(await handler.HandleAsync(query).ConfigureAwait(false), query.ResponseType);
+        var result = ConvertResponse(await handler.HandleAsync(query).ConfigureAwait(false), query.ResponseType);
+
+        return GenericQueryResponseMessage.AsNullableResponseMessage<TResponse>(
+            query.ResponseType.ResponseMessagePayloadType, result);
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<TResponse?> ScatterGatherAsync<TResponse>(IQueryMessage<object, TResponse> query)
+    public async IAsyncEnumerable<IQueryResponseMessage<TResponse>> ScatterGatherAsync<TResponse>(
+        IQueryMessage<object, TResponse> query)
         where TResponse : class
     {
         var handlers = this.GetHandlersForMessage(query);
@@ -76,7 +81,16 @@ public class SimpleQueryBus : IQueryBus
 
         foreach (var handler in handlers)
         {
-            yield return ConvertResponse(await handler.HandleAsync(query).ConfigureAwait(false), query.ResponseType);
+            var result = ConvertResponse(await handler.HandleAsync(query).ConfigureAwait(false), query.ResponseType);
+
+            if (result is null)
+            {
+                continue;
+            }
+
+            // TODO: Add default QueryHandler Error callback
+            yield return GenericQueryResponseMessage.AsNullableResponseMessage<TResponse>(
+                query.ResponseType.ResponseMessagePayloadType, result);
         }
     }
 
