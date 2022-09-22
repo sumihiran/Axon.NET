@@ -15,6 +15,14 @@ public interface ICommandMessage<out TPayload> : IMessage<TPayload>
     string CommandName { get; }
 
     /// <inheritdoc />
+    TPayload IMessage<TPayload>.Payload => this.Payload;
+
+    /// <summary>
+    /// Gets the payload of the command message.
+    /// </summary>
+    new TPayload Payload { get; }
+
+    /// <inheritdoc />
     IMessage<TPayload> IMessage<TPayload>.WithMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
         this.WithMetaData(metaData);
 

@@ -11,6 +11,14 @@ public interface IEventMessage<out TPayload> : IMessage<TPayload>
 {
     // TODO: override identifier
 
+    /// <inheritdoc />
+    TPayload IMessage<TPayload>.Payload => this.Payload;
+
+    /// <summary>
+    /// Gets the payload of the event message.
+    /// </summary>
+    new TPayload Payload { get; }
+
     /// <summary>
     /// Gets the timestamp of this event. The timestamp is set to the date and time the event was reported.
     /// </summary>

@@ -46,9 +46,16 @@ public class GenericQueryMessage<TPayload, TResponse> : MessageDecorator<TPayloa
     public GenericQueryMessage(IMessage<TPayload> message, string queryName, IResponseType<TResponse> responseType)
         : base(message)
     {
+        ArgumentNullException.ThrowIfNull(message.Payload, nameof(message.Payload));
+        this.Payload = message.Payload;
         this.QueryName = queryName;
         this.ResponseType = responseType;
     }
+
+    /// <summary>
+    /// Gets the payload of this event message.
+    /// </summary>
+    public new TPayload Payload { get; }
 
     /// <inheritdoc />
     public string QueryName { get; }

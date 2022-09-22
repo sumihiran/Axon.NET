@@ -28,5 +28,41 @@ public class GenericMessageTests
         Assert.Equal(payload, message.Payload);
     }
 
+    [Fact]
+    public void Should_Throw_ArgumentNullException_When_CommandPayloadIsNull()
+    {
+        var message = GenericMessage.AsMessage(null);
+        var expectedException = Assert.Throws<ArgumentNullException>(() =>
+        {
+            _ = GenericCommandMessage.AsCommandMessage<object>(message);
+        });
+
+        Assert.Contains("Payload", expectedException.Message);
+    }
+
+    [Fact]
+    public void Should_Throw_ArgumentNullException_When_EventPayloadIsNull()
+    {
+        var message = GenericMessage.AsMessage(null);
+        var expectedException = Assert.Throws<ArgumentNullException>(() =>
+        {
+            _ = GenericEventMessage.AsEventMessage<object>(message);
+        });
+
+        Assert.Contains("Payload", expectedException.Message);
+    }
+
+    [Fact]
+    public void Should_Throw_ArgumentNullException_When_QueryPayloadIsNull()
+    {
+        var message = GenericMessage.AsMessage(null);
+        var expectedException = Assert.Throws<ArgumentNullException>(() =>
+        {
+            _ = new GenericQueryMessage<object, object>(message, nameof(message), ResponseTypes.ResponseTypes.InstanceOf<object>());
+        });
+
+        Assert.Contains("Payload", expectedException.Message);
+    }
+
     public record Message;
 }

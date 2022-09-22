@@ -47,7 +47,17 @@ public class GenericEventMessage<TPayload> : MessageDecorator<TPayload>, IEventM
     /// <param name="message">The message containing payload, identifier and metadata.</param>
     /// <param name="timestampSupplier">Supplier for the timestamp of the Message creation.</param>
     public GenericEventMessage(IMessage<TPayload> message, Func<DateTime> timestampSupplier)
-        : base(message) => this.Timestamp = timestampSupplier();
+        : base(message)
+    {
+        ArgumentNullException.ThrowIfNull(message.Payload, nameof(message.Payload));
+        this.Payload = message.Payload;
+        this.Timestamp = timestampSupplier();
+    }
+
+    /// <summary>
+    /// Gets the payload of this event message.
+    /// </summary>
+    public new TPayload Payload { get; }
 
     /// <inheritdoc />
     public DateTime Timestamp { get; }

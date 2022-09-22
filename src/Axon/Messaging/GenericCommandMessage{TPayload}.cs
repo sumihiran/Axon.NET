@@ -35,8 +35,19 @@ public class GenericCommandMessage<TPayload> : MessageDecorator<TPayload>, IComm
     /// </summary>
     /// <param name="message">The message containing payload, identifier and metadata.</param>
     /// <param name="commandName">The name of the command.</param>
+    /// <exception cref="ArgumentNullException">Throws when message payload is null.</exception>
     public GenericCommandMessage(IMessage<TPayload> message, string commandName)
-        : base(message) => this.CommandName = commandName;
+        : base(message)
+    {
+        ArgumentNullException.ThrowIfNull(message.Payload, nameof(message.Payload));
+        this.Payload = message.Payload;
+        this.CommandName = commandName;
+    }
+
+    /// <summary>
+    /// Gets the payload of this command message.
+    /// </summary>
+    public new TPayload Payload { get; }
 
     /// <inheritdoc />
     public string CommandName { get; }
