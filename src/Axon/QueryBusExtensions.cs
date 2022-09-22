@@ -25,6 +25,7 @@ public static class QueryBusExtensions
         Type responseType,
         MessageHandler<IQueryMessage<TPayload, TResponse>> handler)
         where TPayload : class
+        where TResponse : class
         =>
             queryBus.SubscribeAsync<IQueryMessage<TPayload, TResponse>, TResponse>(queryName, responseType, handler);
 
@@ -43,6 +44,7 @@ public static class QueryBusExtensions
         string queryName,
         MessageHandler<IQueryMessage<TPayload, TResponse>> handler)
         where TPayload : class
+        where TResponse : class
         =>
             queryBus.SubscribeAsync<IQueryMessage<TPayload, TResponse>, TResponse>(
                 queryName,

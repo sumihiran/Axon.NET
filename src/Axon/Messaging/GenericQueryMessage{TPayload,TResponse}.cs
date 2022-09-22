@@ -9,6 +9,7 @@ using Axon.Messaging.ResponseTypes;
 /// <typeparam name="TResponse">The type of response expected from this query.</typeparam>
 public class GenericQueryMessage<TPayload, TResponse> : MessageDecorator<TPayload>, IQueryMessage<TPayload, TResponse>
     where TPayload : class
+    where TResponse : class
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="GenericQueryMessage{TPayload, TResponse}"/> class using the given

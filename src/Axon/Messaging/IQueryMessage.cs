@@ -12,6 +12,7 @@ using Axon.Messaging.ResponseTypes;
 /// <typeparam name="TResponse">The type of response expected from this query.</typeparam>
 public interface IQueryMessage<out TPayload, out TResponse> : IMessage<TPayload>
     where TPayload : class
+    where TResponse : class
 {
     /// <summary>
     /// Gets the name identifying the query to be executed.
