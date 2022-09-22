@@ -9,8 +9,33 @@ namespace Axon.Messaging;
 public interface IEventMessage<out TPayload> : IMessage<TPayload>
     where TPayload : class
 {
+    // TODO: override identifier
+
     /// <summary>
     /// Gets the timestamp of this event. The timestamp is set to the date and time the event was reported.
     /// </summary>
     DateTime Timestamp { get; }
+
+    /// <inheritdoc />
+    IMessage<TPayload> IMessage<TPayload>.WithMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
+        this.WithMetaData(metaData);
+
+    /// <inheritdoc />
+    IMessage<TPayload> IMessage<TPayload>.AndMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
+        this.AndMetaData(metaData);
+
+    /// <summary>
+    /// Returns a copy of this EventMessage with the given <paramref name="metaData"/>. The payload,
+    /// <see cref="Timestamp"/> and <see cref="IMessage{TPayload}.Identifier"/> remain unchanged.
+    /// </summary>
+    /// <param name="metaData">The new MetaData for the Message.</param>
+    /// <returns>A copy of this message with the given MetaData.</returns>
+    new IEventMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData);
+
+    /// <summary>
+    /// Returns a copy of this CommandMessage with it MetaData merged with the given. The payload remain unchanged.
+    /// </summary>
+    /// <param name="metaData">The MetaData to merge with.</param>
+    /// <returns>A copy of this message with the given MetaData.</returns>
+    new IEventMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData);
 }

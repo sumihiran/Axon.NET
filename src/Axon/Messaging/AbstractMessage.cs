@@ -8,7 +8,7 @@ public abstract class AbstractMessage<TPayload> : IMessage<TPayload>
     where TPayload : class
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AbstractMessage{T}"/> class  with given identifier.
+    /// Initializes a new instance of the <see cref="AbstractMessage{TPayload}"/> class  with given identifier.
     /// </summary>
     /// <param name="identifier">The message identifier.</param>
     protected AbstractMessage(string identifier) => this.Identifier = identifier;

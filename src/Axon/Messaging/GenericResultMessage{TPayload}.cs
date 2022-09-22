@@ -75,6 +75,14 @@ public class GenericResultMessage<TPayload> : MessageDecorator<TPayload>, IResul
     public Exception? Exception { get; }
 
     /// <inheritdoc />
+    IResultMessage<TPayload> IResultMessage<TPayload>.
+        WithMetaData(ICollection<KeyValuePair<string, object>> metaData) => this.WithMetaData(metaData);
+
+    /// <inheritdoc />
+    IResultMessage<TPayload> IResultMessage<TPayload>.AndMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
+        this.AndMetaData(metaData);
+
+    /// <inheritdoc />
     public override GenericResultMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
         new(this.Message.WithMetaData(metaData), this.Exception);
 

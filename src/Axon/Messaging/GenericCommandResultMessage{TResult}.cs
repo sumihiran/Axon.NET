@@ -71,8 +71,16 @@ public class GenericCommandResultMessage<TResult> : GenericResultMessage<TResult
     }
 
     /// <inheritdoc />
-    public override GenericCommandResultMessage<TResult> WithMetaData(ICollection<KeyValuePair<string, object>> metaData)
-        => new(this.Message.WithMetaData(metaData), this.Exception);
+    ICommandResultMessage<TResult> ICommandResultMessage<TResult>.
+        WithMetaData(ICollection<KeyValuePair<string, object>> metaData) => this.WithMetaData(metaData);
+
+    /// <inheritdoc />
+    ICommandResultMessage<TResult> ICommandResultMessage<TResult>
+        .AndMetaData(ICollection<KeyValuePair<string, object>> metaData) => this.AndMetaData(metaData);
+
+    /// <inheritdoc />
+    public override GenericCommandResultMessage<TResult> WithMetaData(
+        ICollection<KeyValuePair<string, object>> metaData) => new(this.Message.WithMetaData(metaData), this.Exception);
 
     /// <inheritdoc />
     public override GenericCommandResultMessage<TResult> AndMetaData(ICollection<KeyValuePair<string, object>> metaData)
