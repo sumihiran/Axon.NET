@@ -24,6 +24,7 @@ public class SimpleQueryBus : IQueryBus
         Type responseType,
         MessageHandler<TMessage> handler)
         where TMessage : IQueryMessage<object, TResponse>
+        where TResponse : class
     {
         var querySubscription = new QuerySubscription(responseType, handler);
         _ = this.subscriptions.AddOrUpdate(
@@ -49,6 +50,7 @@ public class SimpleQueryBus : IQueryBus
 
     /// <inheritdoc />
     public async Task<TResponse?> QueryAsync<TResponse>(IQueryMessage<object, TResponse> query)
+        where TResponse : class
     {
         var handlers = this.GetHandlersForMessage(query);
         if (handlers.IsEmpty)
@@ -64,6 +66,7 @@ public class SimpleQueryBus : IQueryBus
 
     /// <inheritdoc />
     public async IAsyncEnumerable<TResponse?> ScatterGatherAsync<TResponse>(IQueryMessage<object, TResponse> query)
+        where TResponse : class
     {
         var handlers = this.GetHandlersForMessage(query);
         if (handlers.IsEmpty)
@@ -91,6 +94,7 @@ public class SimpleQueryBus : IQueryBus
 
     private ImmutableList<IMessageHandler> GetHandlersForMessage<TResponse>(
         IQueryMessage<object, TResponse> queryMessage)
+        where TResponse : class
     {
         var responseType = queryMessage.ResponseType;
         if (this.subscriptions.TryGetValue(queryMessage.QueryName, out var querySubscriptions))

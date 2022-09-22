@@ -35,13 +35,13 @@ public class SimpleQueryBusTest
         // Arrange
         IQueryBus sut = new SimpleQueryBus();
         var invocationCount = 0;
-        var handler = QueryHandler<string, int>(_ =>
+        var handler = QueryHandler<string, object>(_ =>
         {
             invocationCount++;
             return 9999;
         });
         var queryMessage =
-            new GenericQueryMessage<string, int>("request", "question", ResponseTypes.InstanceOf<int>());
+            new GenericQueryMessage<string, object>("request", "question", ResponseTypes.InstanceOf<object>());
 
         // Act
         var registration = await sut.SubscribeAsync("question", handler);
@@ -117,11 +117,14 @@ public class SimpleQueryBusTest
 
     private static MessageHandler<IQueryMessage<TPayload, TResponse>> QueryHandler<TPayload, TResponse>(
         Func<TPayload, TResponse> call)
-        where TPayload : class =>
+        where TPayload : class
+        where TResponse : class
+        =>
         new DelegatingQueryHandler<TPayload, TResponse>(call);
 
     private class DelegatingQueryHandler<TPayload, TResponse> : MessageHandler<IQueryMessage<TPayload, TResponse>>
         where TPayload : class
+        where TResponse : class
     {
         private readonly Func<TPayload, TResponse> call;
 
