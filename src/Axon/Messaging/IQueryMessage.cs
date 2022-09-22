@@ -14,6 +14,14 @@ public interface IQueryMessage<out TPayload, out TResponse> : IMessage<TPayload>
     where TPayload : class
     where TResponse : class
 {
+    /// <inheritdoc />
+    TPayload IMessage<TPayload>.Payload => this.Payload;
+
+    /// <summary>
+    /// Gets the payload of the query message.
+    /// </summary>
+    new TPayload Payload { get; }
+
     /// <summary>
     /// Gets the name identifying the query to be executed.
     /// </summary>
