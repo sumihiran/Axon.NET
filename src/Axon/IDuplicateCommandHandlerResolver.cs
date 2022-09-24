@@ -12,11 +12,20 @@ public interface IDuplicateCommandHandlerResolver
     /// command handling, or otherwise throwing an exception to reject registration altogether.
     /// </summary>
     /// <param name="commandName">The name of the Command for which the duplicate was detected.</param>
-    /// <param name="registeredHandler">The <see cref="IMessageHandler"/> previously registered with the Command Bus.</param>
-    /// <param name="candidateHandler">The <see cref="IMessageHandler"/>  that is newly registered and conflicts with
-    /// the existing registration.</param>
-    /// <returns>The resolved <see cref="IMessageHandler"/>. Could be the <paramref name="registeredHandler"/>,
-    /// the <paramref name="candidateHandler"/> or another handler entirely.</returns>
+    /// <param name="registeredHandler">
+    /// The <see cref="MessageHandler{TMessage}"/> previously registered with the Command Bus.
+    /// </param>
+    /// <param name="candidateHandler">
+    /// The <see cref="MessageHandler{TMessage}"/>  that is newly registered and conflicts with
+    /// the existing registration.
+    /// </param>
+    /// <returns>
+    /// The resolved <see cref="MessageHandler{TMessage}"/>. Could be the <paramref name="registeredHandler"/>, the
+    /// <paramref name="candidateHandler"/> or another handler entirely.
+    /// </returns>
     /// <exception cref="InvalidOperationException">When registration operation should fail.</exception>
-    IMessageHandler Resolve(string commandName, IMessageHandler registeredHandler, IMessageHandler candidateHandler);
+    MessageHandler<ICommandMessage<object>> Resolve(
+        string commandName,
+        MessageHandler<ICommandMessage<object>> registeredHandler,
+        MessageHandler<ICommandMessage<object>> candidateHandler);
 }

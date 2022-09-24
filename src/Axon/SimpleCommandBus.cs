@@ -8,7 +8,7 @@ using Axon.Messaging;
 /// </summary>
 public class SimpleCommandBus : ICommandBus
 {
-    private readonly ConcurrentDictionary<string, IMessageHandler> subscriptions = new();
+    private readonly ConcurrentDictionary<string, MessageHandler<ICommandMessage<object>>> subscriptions = new();
     private readonly IDuplicateCommandHandlerResolver duplicateCommandHandlerResolver;
 
     // TODO: TransactionManager
@@ -25,6 +25,16 @@ public class SimpleCommandBus : ICommandBus
     public SimpleCommandBus(IDuplicateCommandHandlerResolver duplicateCommandHandlerResolver) =>
         this.duplicateCommandHandlerResolver = duplicateCommandHandlerResolver;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SimpleCommandBus"/> class.
+    /// </summary>
+    /// <param name="duplicateCommandHandlerResolver"><see cref="DuplicateCommandHandlerResolver"/> used to
+    /// resolves the road to take when a duplicate command handler is subscribed.</param>
+    public SimpleCommandBus(DuplicateCommandHandlerResolver duplicateCommandHandlerResolver)
+        : this(new WrappedDuplicateCommandHandlerCallbackResolver(duplicateCommandHandlerResolver))
+    {
+    }
+
     /// <inheritdoc />
     public async Task<ICommandResultMessage<TResult>> DispatchAsync<TResult>(ICommandMessage<object> command)
         where TResult : class
@@ -38,7 +48,8 @@ public class SimpleCommandBus : ICommandBus
         }
 
         return GenericCommandResultMessage.AsCommandResultMessage<TResult>(
-            await this.HandleAsync<TResult>(command, handler).ConfigureAwait(false));
+            await this.HandleAsync<TResult>(command, (MessageHandler<ICommandMessage<object>>)handler)
+                .ConfigureAwait(false));
     }
 
     /// <inheritdoc />
@@ -46,7 +57,9 @@ public class SimpleCommandBus : ICommandBus
         => this.DispatchAsync<Unit>(command);
 
     /// <inheritdoc />
-    public Task<IAsyncDisposable> SubscribeAsync(string commandName, IMessageHandler handler)
+    public Task<IAsyncDisposable> SubscribeAsync(
+        string commandName,
+        MessageHandler<ICommandMessage<object>> handler)
     {
         _ = this.subscriptions.AddOrUpdate(
             commandName,
@@ -67,7 +80,7 @@ public class SimpleCommandBus : ICommandBus
     /// <returns>The result of the message handling.</returns>
     protected virtual async Task<IResultMessage<TResult>> HandleAsync<TResult>(
         ICommandMessage<object> command,
-        IMessageHandler handler)
+        MessageHandler<ICommandMessage<object>> handler)
         where TResult : class
     {
         IResultMessage<TResult> resultMessage;

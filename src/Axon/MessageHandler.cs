@@ -1,4 +1,6 @@
-namespace Axon.Messaging;
+namespace Axon;
+
+using Axon.Messaging;
 
 /// <summary>
 /// A component that processes messages.
