@@ -5,20 +5,21 @@ using Axon.Messaging;
 /// <summary>
 /// Interface for a component that processes Messages.
 /// </summary>
-public interface IMessageHandler
+/// <typeparam name="TMessage">The message type this handler can process.</typeparam>
+public interface IMessageHandler<in TMessage>
+    where TMessage : IMessage<object>
 {
     /// <summary>
-    /// Handle abstract message.
+    /// Handle the given message.
     /// </summary>
-    /// <param name="message">A message.</param>
-    /// <returns>A <see cref="Task"/> containing the result of the message processing.</returns>
-    /// <seealso cref="MessageHandler{TMessage}"/>
-    Task<object?> HandleAsync(IMessage<object> message);
+    /// <param name="message">The message to be handled.</param>
+    /// <returns>The result of the message handling.</returns>
+    Task<object?> HandleAsync(TMessage message);
 
     /// <summary>
     /// Indicates whether this handler can handle the given message.
     /// </summary>
     /// <param name="message">The message to verify.</param>
     /// <returns><c>true</c> if this handler can handle the message, otherwise <c>false</c>.</returns>
-    bool CanHandle(object message);
+    public bool CanHandle(object message) => true;
 }

@@ -19,7 +19,7 @@ public static class CommandBusExtensions
         string commandName,
         MessageHandlerCallback<ICommandMessage<object>> handler)
     {
-        var wrappedHandler = new WrappedCommandHandlerCallback(handler);
+        var wrappedHandler = new WrappedMessageHandlerCallback<ICommandMessage<object>>(handler);
         return commandBus.SubscribeAsync(commandName, wrappedHandler);
     }
 }

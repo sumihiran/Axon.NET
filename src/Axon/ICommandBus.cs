@@ -39,5 +39,5 @@ public interface ICommandBus
     /// <param name="commandName">The name of the command to subscribe the handler to.</param>
     /// <param name="handler">The handler instance that handles the given type of command.</param>
     /// <returns>>A <see cref="Task"/> that represents the asynchronous subscribe operation.</returns>
-    Task<IAsyncDisposable> SubscribeAsync(string commandName, MessageHandler<ICommandMessage<object>> handler);
+    Task<IAsyncDisposable> SubscribeAsync(string commandName, IMessageHandler<ICommandMessage<object>> handler);
 }

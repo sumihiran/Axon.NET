@@ -9,13 +9,13 @@ public class SimpleCommandBusTests
     private static readonly ICommandMessage<object> Command =
         GenericCommandMessage.AsCommandMessage<object>(new object());
 
-    private static readonly Mock<MessageHandler<ICommandMessage<object>>> CommandHandlerMock =
+    private static readonly Mock<IMessageHandler<ICommandMessage<object>>> CommandHandlerMock =
         CreateCommandMessageHandlerMock();
 
     private static readonly Mock<IDuplicateCommandHandlerResolver> DuplicateCommandHandlerResolverMock = new();
     private readonly SimpleCommandBus commandBus = new(DuplicateCommandHandlerResolverMock.Object);
 
-    private static MessageHandler<ICommandMessage<object>> CommandHandler => CommandHandlerMock.Object;
+    private static IMessageHandler<ICommandMessage<object>> CommandHandler => CommandHandlerMock.Object;
 
     private static string CommandName => Command.CommandName;
 
@@ -40,8 +40,7 @@ public class SimpleCommandBusTests
         await registration.DisposeAsync();
 
         var exception = await Assert
-            .ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.DispatchAsync(Command))
-            ;
+            .ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.DispatchAsync(Command));
 
         // Assert
         CommandHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Once);
@@ -54,14 +53,13 @@ public class SimpleCommandBusTests
         // Arrange
         CommandHandlerMock.Invocations.Clear();
 
-        var unsupportedHandlerMock = new Mock<MessageHandler<ICommandMessage<object>>>();
+        var unsupportedHandlerMock = new Mock<IMessageHandler<ICommandMessage<object>>>();
         unsupportedHandlerMock.Setup(_ => _.CanHandle(Command)).Returns(false);
 
         // Act
         await using var registration = await this.commandBus.SubscribeAsync(CommandName, unsupportedHandlerMock.Object);
         var exception = await Assert
-            .ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.DispatchAsync(Command))
-            ;
+            .ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.DispatchAsync(Command));
 
         // Assert
         CommandHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Never);
@@ -152,10 +150,10 @@ public class SimpleCommandBusTests
     {
         // Arrange
         var invocations = 0;
-        MessageHandler<ICommandMessage<object>> DuplicateHandlerCallback(
+        IMessageHandler<ICommandMessage<object>> DuplicateHandlerCallback(
             string s,
-            MessageHandler<ICommandMessage<object>> registeredHandler,
-            MessageHandler<ICommandMessage<object>> messageHandler)
+            IMessageHandler<ICommandMessage<object>> registeredHandler,
+            IMessageHandler<ICommandMessage<object>> messageHandler)
         {
             invocations++;
             return registeredHandler;
@@ -237,7 +235,7 @@ public class SimpleCommandBusTests
         Assert.NotEqual(TaskStatus.RanToCompletion, completionTask.Status);
     }
 
-    private static Mock<MessageHandler<ICommandMessage<object>>> CreateCommandMessageHandlerMock() =>
+    private static Mock<IMessageHandler<ICommandMessage<object>>> CreateCommandMessageHandlerMock() =>
         new() { CallBase = true };
 
     private record Ping;

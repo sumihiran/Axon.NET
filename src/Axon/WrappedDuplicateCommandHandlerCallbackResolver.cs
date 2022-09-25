@@ -20,9 +20,9 @@ internal class WrappedDuplicateCommandHandlerCallbackResolver : IDuplicateComman
         DuplicateCommandHandlerResolver duplicateResolver) => this.duplicateResolver = duplicateResolver;
 
     /// <inheritdoc />
-    public MessageHandler<ICommandMessage<object>> Resolve(
+    public IMessageHandler<ICommandMessage<object>> Resolve(
         string commandName,
-        MessageHandler<ICommandMessage<object>> registeredHandler,
-        MessageHandler<ICommandMessage<object>> candidateHandler) =>
+        IMessageHandler<ICommandMessage<object>> registeredHandler,
+        IMessageHandler<ICommandMessage<object>> candidateHandler) =>
         this.duplicateResolver(commandName, registeredHandler, candidateHandler);
 }

@@ -8,7 +8,7 @@ using Axon.Messaging;
 /// </summary>
 public class SimpleCommandBus : ICommandBus
 {
-    private readonly ConcurrentDictionary<string, MessageHandler<ICommandMessage<object>>> subscriptions = new();
+    private readonly ConcurrentDictionary<string, IMessageHandler<ICommandMessage<object>>> subscriptions = new();
     private readonly IDuplicateCommandHandlerResolver duplicateCommandHandlerResolver;
 
     // TODO: TransactionManager
@@ -48,7 +48,7 @@ public class SimpleCommandBus : ICommandBus
         }
 
         return GenericCommandResultMessage.AsCommandResultMessage<TResult>(
-            await this.HandleAsync<TResult>(command, (MessageHandler<ICommandMessage<object>>)handler)
+            await this.HandleAsync<TResult>(command, handler)
                 .ConfigureAwait(false));
     }
 
@@ -58,8 +58,7 @@ public class SimpleCommandBus : ICommandBus
 
     /// <inheritdoc />
     public Task<IAsyncDisposable> SubscribeAsync(
-        string commandName,
-        MessageHandler<ICommandMessage<object>> handler)
+        string commandName, IMessageHandler<ICommandMessage<object>> handler)
     {
         _ = this.subscriptions.AddOrUpdate(
             commandName,
@@ -80,7 +79,7 @@ public class SimpleCommandBus : ICommandBus
     /// <returns>The result of the message handling.</returns>
     protected virtual async Task<IResultMessage<TResult>> HandleAsync<TResult>(
         ICommandMessage<object> command,
-        MessageHandler<ICommandMessage<object>> handler)
+        IMessageHandler<ICommandMessage<object>> handler)
         where TResult : class
     {
         IResultMessage<TResult> resultMessage;
@@ -117,7 +116,7 @@ public class SimpleCommandBus : ICommandBus
         return resultMessage;
     }
 
-    private IMessageHandler? FindCommandHandlerFor(string commandName) =>
+    private IMessageHandler<ICommandMessage<object>>? FindCommandHandlerFor(string commandName) =>
         this.subscriptions.GetValueOrDefault(commandName);
 
     private class Registration : IAsyncDisposable
