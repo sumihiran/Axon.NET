@@ -17,7 +17,7 @@ public static class QueryBusExtensions
     /// <param name="handler">A handler that handles the query.</param>
     /// <typeparam name="TResponse">The response type.</typeparam>
     /// <returns>A <see cref="Task"/> containing a handle to un-subscribe the query handler.</returns>
-    public static Task<IAsyncDisposable> SubscribeAsync<TResponse>(
+    public static Task<IRegistration> SubscribeAsync<TResponse>(
         this IQueryBus queryBus,
         string queryName,
         Type responseType,

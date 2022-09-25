@@ -14,7 +14,7 @@ public static class CommandBusExtensions
     /// <param name="commandName">The name of the command to subscribe the handler to.</param>
     /// <param name="handler">The handler that handles the given type of command.</param>
     /// <returns>>A <see cref="Task"/> that represents the asynchronous subscribe operation.</returns>
-    public static Task<IAsyncDisposable> SubscribeAsync(
+    public static Task<IRegistration> SubscribeAsync(
         this ICommandBus commandBus,
         string commandName,
         MessageHandlerCallback<ICommandMessage<object>> handler)

@@ -19,7 +19,7 @@ public interface IQueryBus
     /// <param name="handler">A handler that handles the query.</param>
     /// <typeparam name="TResponse">The response type.</typeparam>
     /// <returns>A <see cref="Task"/> containing a handle to un-subscribe the query handler.</returns>
-    Task<IAsyncDisposable> SubscribeAsync<TResponse>(
+    Task<IRegistration> SubscribeAsync<TResponse>(
         string queryName,
         Type responseType,
         IMessageHandler<IQueryMessage<object, TResponse>> handler)
