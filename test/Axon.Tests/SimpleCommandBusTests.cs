@@ -13,7 +13,10 @@ public class SimpleCommandBusTests
         CreateCommandMessageHandlerMock();
 
     private static readonly Mock<IDuplicateCommandHandlerResolver> DuplicateCommandHandlerResolverMock = new();
-    private readonly SimpleCommandBus commandBus = new(DuplicateCommandHandlerResolverMock.Object);
+
+    private readonly SimpleCommandBus commandBus = new SimpleCommandBus.Builder()
+        .WithDuplicateCommandHandlerResolver(DuplicateCommandHandlerResolverMock.Object)
+        .Build();
 
     private static IMessageHandler<ICommandMessage<object>> CommandHandler => CommandHandlerMock.Object;
 
@@ -100,6 +103,40 @@ public class SimpleCommandBusTests
     }
 
     [Fact]
+    public async Task DispatchAsync_FireAndForget_Should_InvokeDefaultCallback()
+    {
+        // Arrange
+        var expectedResultPayload = new Pong();
+        ICommandMessage<object>? commandMessage = null;
+        ICommandResultMessage<object>? commandResultMessage = null;
+
+        var sut = new SimpleCommandBus.Builder()
+            .WithDefaultCommandCallback((message, resultMessage) =>
+            {
+                commandMessage = message;
+                commandResultMessage = resultMessage;
+                return Task.CompletedTask;
+            })
+            .Build();
+
+        Task<object?> Handler(ICommandMessage<object> command) => Task.FromResult<object?>(expectedResultPayload);
+
+        var command = GenericCommandMessage.AsCommandMessage(new Ping());
+
+        // Act
+        await using var registration = await sut.SubscribeAsync(command.CommandName, Handler);
+
+        await sut.DispatchAsync(command);
+
+        // Assert
+        Assert.NotNull(commandMessage);
+        Assert.NotNull(commandResultMessage);
+        Assert.Equal(command.Payload, commandMessage.Payload);
+        Assert.True(commandResultMessage.IsSuccess);
+        Assert.Equal(expectedResultPayload, commandResultMessage.Payload);
+    }
+
+    [Fact]
     public async Task Should_ReturnResultWithException_When_HandlerThrowsException()
     {
         // Arrange
@@ -150,6 +187,7 @@ public class SimpleCommandBusTests
     {
         // Arrange
         var invocations = 0;
+
         IMessageHandler<ICommandMessage<object>> DuplicateHandlerCallback(
             string s,
             IMessageHandler<ICommandMessage<object>> registeredHandler,
@@ -159,7 +197,7 @@ public class SimpleCommandBusTests
             return registeredHandler;
         }
 
-        var sut = new SimpleCommandBus(DuplicateHandlerCallback);
+        var sut = new SimpleCommandBus.Builder().WithDuplicateCommandHandlerResolver(DuplicateHandlerCallback).Build();
 
         var initialHandlerMock = new Mock<MessageHandlerCallback<ICommandMessage<object>>>();
         var duplicateHandlerMock = new Mock<MessageHandlerCallback<ICommandMessage<object>>>();
@@ -183,56 +221,24 @@ public class SimpleCommandBusTests
     public async Task Should_InvokeExpectedHandler_When_DuplicateCommandHandlerSubscribed()
     {
         // Arrange
-        DuplicateCommandHandlerResolverMock.Reset();
         var initialHandlerMock = CreateCommandMessageHandlerMock();
         var duplicateHandlerMock = CreateCommandMessageHandlerMock();
         var expectedHandlerMock = CreateCommandMessageHandlerMock();
-
-        DuplicateCommandHandlerResolverMock
-            .Setup(r => r.Resolve(CommandName, initialHandlerMock.Object, duplicateHandlerMock.Object))
-            .Returns(expectedHandlerMock.Object);
+        var sut = new SimpleCommandBus.Builder()
+            .WithDuplicateCommandHandlerResolver((_, registered, candidateHandler) => expectedHandlerMock.Object)
+            .Build();
 
         // Act
-        await this.commandBus.SubscribeAsync(CommandName, initialHandlerMock.Object);
-        await this.commandBus.SubscribeAsync(CommandName, duplicateHandlerMock.Object);
+        await sut.SubscribeAsync(CommandName, initialHandlerMock.Object);
+        await sut.SubscribeAsync(CommandName, duplicateHandlerMock.Object);
 
         // And after sending a test command, it should be handled by the expected handler
-        await this.commandBus.DispatchAsync(Command);
+        await sut.DispatchAsync(Command);
 
         // Assert
         initialHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Never);
         duplicateHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Never);
         expectedHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Once);
-    }
-
-    [Fact]
-    public async Task DispatchAsync_FireAndForget_Should_ReturnOnceDispatched()
-    {
-        // Arrange
-        var sut = this.commandBus;
-        var cancellationTokenSource = new CancellationTokenSource();
-        var initMonitor = new SemaphoreSlim(1, 1);
-        var completionTask = Task.Delay(TimeSpan.FromMinutes(1), cancellationTokenSource.Token);
-
-        async Task<object?> CommandHandler(ICommandMessage<object> commandMessage)
-        {
-            initMonitor.Release(1);
-            completionTask.Start(TaskScheduler.Current);
-            await completionTask.WaitAsync(CancellationToken.None);
-            return null;
-        }
-
-        // Act
-        await initMonitor.WaitAsync(CancellationToken.None);
-        await using var registration = await sut.SubscribeAsync(CommandName, CommandHandler);
-
-        await sut.DispatchAsync(Command);
-
-        // completes when monitor released within the handler
-        await initMonitor.WaitAsync(CancellationToken.None);
-
-        // Assert
-        Assert.NotEqual(TaskStatus.RanToCompletion, completionTask.Status);
     }
 
     private static Mock<IMessageHandler<ICommandMessage<object>>> CreateCommandMessageHandlerMock() =>
