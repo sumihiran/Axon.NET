@@ -19,7 +19,7 @@ public class SimpleQueryBus : IQueryBus
     public ImmutableDictionary<string, ImmutableList<IQuerySubscription>> Subscriptions => this.GetSubscriptions();
 
     /// <inheritdoc />
-    public Task<IAsyncDisposable> SubscribeAsync<TResponse>(
+    public Task<IRegistration> SubscribeAsync<TResponse>(
         string queryName,
         Type responseType,
         IMessageHandler<IQueryMessage<object, TResponse>> handler)
@@ -39,8 +39,7 @@ public class SimpleQueryBus : IQueryBus
                 return handlers;
             });
 
-        return Task.FromResult(
-            (IAsyncDisposable)new Registration(() => this.Unsubscribe(queryName, querySubscription)));
+        return Task.FromResult<IRegistration>(new Registration(() => this.Unsubscribe(queryName, querySubscription)));
     }
 
     /// <inheritdoc />
@@ -94,12 +93,14 @@ public class SimpleQueryBus : IQueryBus
     private static TResponse? ConvertResponse<TResponse>(object? response, IResponseType<TResponse> responseType)
         => responseType.Convert(response);
 
-    private void Unsubscribe(string queryName, IQuerySubscription querySubscription)
+    private bool Unsubscribe(string queryName, IQuerySubscription querySubscription)
     {
         if (this.subscriptions.TryGetValue(queryName, out var querySubscriptions))
         {
-            querySubscriptions.Remove(querySubscription);
+            return querySubscriptions.Remove(querySubscription);
         }
+
+        return false;
     }
 
     private ImmutableList<IMessageHandler<IQueryMessage<object, TResponse>>> GetHandlersForMessage<TResponse>(
@@ -125,18 +126,4 @@ public class SimpleQueryBus : IQueryBus
         this.subscriptions
             .ToImmutableDictionary(s => s.Key, kv => kv.Value.Select(q => q)
                 .ToImmutableList());
-
-    private class Registration : IAsyncDisposable
-    {
-        private readonly Action unsubscribeAction;
-
-        public Registration(Action unsubscribeAction) => this.unsubscribeAction = unsubscribeAction;
-
-        /// <inheritdoc />
-        public ValueTask DisposeAsync()
-        {
-            this.unsubscribeAction.Invoke();
-            return ValueTask.CompletedTask;
-        }
-    }
 }

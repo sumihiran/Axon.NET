@@ -11,12 +11,12 @@ public class SimpleEventBus : IEventBus
     private readonly ConcurrentDictionary<int, Func<List<IEventMessage<object>>, Task>> eventProcessors = new();
 
     /// <inheritdoc />
-    public Task<IAsyncDisposable> SubscribeAsync(Func<List<IEventMessage<object>>, Task> messageProcessor)
+    public Task<IRegistration> SubscribeAsync(Func<List<IEventMessage<object>>, Task> messageProcessor)
     {
         // TODO: Log if subscriber is already added.
         _ = this.eventProcessors.TryAdd(messageProcessor.GetHashCode(), messageProcessor);
 
-        return Task.FromResult((IAsyncDisposable)new Registration(() =>
+        return Task.FromResult<IRegistration>(new Registration(() =>
             this.eventProcessors.Remove(messageProcessor.GetHashCode(), out _)));
     }
 
@@ -36,21 +36,6 @@ public class SimpleEventBus : IEventBus
         foreach (var eventProcessor in this.eventProcessors.Values.ToList())
         {
             await eventProcessor(events).ConfigureAwait(true);
-        }
-    }
-
-    // TODO: Extract to IRegistration
-    private class Registration : IAsyncDisposable
-    {
-        private readonly Action unsubscribeAction;
-
-        public Registration(Action unsubscribeAction) => this.unsubscribeAction = unsubscribeAction;
-
-        /// <inheritdoc />
-        public ValueTask DisposeAsync()
-        {
-            this.unsubscribeAction.Invoke();
-            return ValueTask.CompletedTask;
         }
     }
 }

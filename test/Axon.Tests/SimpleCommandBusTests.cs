@@ -40,7 +40,7 @@ public class SimpleCommandBusTests
         // Act
         var registration = await this.commandBus.SubscribeAsync(CommandName, CommandHandler);
         await this.commandBus.DispatchAsync(Command);
-        await registration.DisposeAsync();
+        await registration.CancelAsync();
 
         var exception = await Assert
             .ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.DispatchAsync(Command));

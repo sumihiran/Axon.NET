@@ -20,5 +20,5 @@ public interface ISubscribableMessageSource<TMessage>
     /// A <see cref="Task"/> representing asynchronous operation which results in a handle to unsubscribe
     /// the <paramref name="messageProcessor"/>. When unsubscribed it will no longer receive messages.
     /// </returns>
-    Task<IAsyncDisposable> SubscribeAsync(Func<List<TMessage>, Task> messageProcessor);
+    Task<IRegistration> SubscribeAsync(Func<List<TMessage>, Task> messageProcessor);
 }

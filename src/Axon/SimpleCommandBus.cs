@@ -52,7 +52,7 @@ public class SimpleCommandBus : ICommandBus
     }
 
     /// <inheritdoc />
-    public Task<IAsyncDisposable> SubscribeAsync(
+    public Task<IRegistration> SubscribeAsync(
         string commandName, IMessageHandler<ICommandMessage<object>> handler)
     {
         _ = this.subscriptions.AddOrUpdate(
@@ -61,8 +61,7 @@ public class SimpleCommandBus : ICommandBus
             (_, existingHandler) =>
                 this.duplicateCommandHandlerResolver.Resolve(commandName, existingHandler, handler));
 
-        return Task.FromResult(
-            (IAsyncDisposable)new Registration(() => this.subscriptions.Remove(commandName, out _)));
+        return Task.FromResult<IRegistration>(new Registration(() => this.subscriptions.Remove(commandName, out _)));
     }
 
     /// <summary>
@@ -175,19 +174,5 @@ public class SimpleCommandBus : ICommandBus
         /// </summary>
         /// <returns>A  <see cref="SimpleCommandBus"/> as specified through this Builder.</returns>
         public SimpleCommandBus Build() => new(this);
-    }
-
-    private class Registration : IAsyncDisposable
-    {
-        private readonly Action unsubscribeAction;
-
-        public Registration(Action unsubscribeAction) => this.unsubscribeAction = unsubscribeAction;
-
-        /// <inheritdoc />
-        public ValueTask DisposeAsync()
-        {
-            this.unsubscribeAction.Invoke();
-            return ValueTask.CompletedTask;
-        }
     }
 }
