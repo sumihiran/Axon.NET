@@ -19,7 +19,7 @@ public interface IQueryBus
     /// <param name="handler">A handler that handles the query.</param>
     /// <typeparam name="TResponse">The response type.</typeparam>
     /// <returns>A <see cref="Task"/> containing a handle to un-subscribe the query handler.</returns>
-    public Task<IAsyncDisposable> SubscribeAsync<TResponse>(
+    Task<IAsyncDisposable> SubscribeAsync<TResponse>(
         string queryName,
         Type responseType,
         IMessageHandler<IQueryMessage<object, TResponse>> handler)
@@ -30,9 +30,11 @@ public interface IQueryBus
     /// <paramref name="query"/>'s queryName and responseType.
     /// </summary>
     /// <param name="query">The query.</param>
+    /// <typeparam name="TQuery">The type of the query.</typeparam>
     /// <typeparam name="TResponse">The type of response expected from this query.</typeparam>
     /// <returns>A <see cref="Task{TResult}"/>  that resolves when the response is available.</returns>
-    Task<IQueryResponseMessage<TResponse>> QueryAsync<TResponse>(IQueryMessage<object, TResponse> query)
+    Task<IQueryResponseMessage<TResponse>> QueryAsync<TQuery, TResponse>(IQueryMessage<TQuery, TResponse> query)
+        where TQuery : class
         where TResponse : class;
 
     /// <summary>
@@ -43,11 +45,13 @@ public interface IQueryBus
     /// attempting to do so, the returned AsyncEnumerable is empty.
     /// </summary>
     /// <param name="query">The query.</param>
+    /// <typeparam name="TQuery">The type of the query.</typeparam>
     /// <typeparam name="TResponse">The response type of the query.</typeparam>
     /// <returns>An AsyncEnumerable of the query results.</returns>
     /// TODO: Add deadline
-    IAsyncEnumerable<IQueryResponseMessage<TResponse>> ScatterGatherAsync<TResponse>(
-        IQueryMessage<object, TResponse> query)
+    IAsyncEnumerable<IQueryResponseMessage<TResponse>> ScatterGatherAsync<TQuery, TResponse>(
+        IQueryMessage<TQuery, TResponse> query)
+        where TQuery : class
         where TResponse : class;
 
     // TODO: Query Subscriptions

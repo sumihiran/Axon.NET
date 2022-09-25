@@ -44,8 +44,9 @@ public class SimpleQueryBus : IQueryBus
     }
 
     /// <inheritdoc />
-    public async Task<IQueryResponseMessage<TResponse>> QueryAsync<TResponse>(
-        IQueryMessage<object, TResponse> query)
+    public async Task<IQueryResponseMessage<TResponse>> QueryAsync<TQuery, TResponse>(
+        IQueryMessage<TQuery, TResponse> query)
+        where TQuery : class
         where TResponse : class
     {
         var handlers = this.GetHandlersForMessage(query);
@@ -64,8 +65,9 @@ public class SimpleQueryBus : IQueryBus
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<IQueryResponseMessage<TResponse>> ScatterGatherAsync<TResponse>(
-        IQueryMessage<object, TResponse> query)
+    public async IAsyncEnumerable<IQueryResponseMessage<TResponse>> ScatterGatherAsync<TQuery, TResponse>(
+        IQueryMessage<TQuery, TResponse> query)
+        where TQuery : class
         where TResponse : class
     {
         var handlers = this.GetHandlersForMessage(query);
@@ -118,8 +120,11 @@ public class SimpleQueryBus : IQueryBus
         return ImmutableList<IMessageHandler<IQueryMessage<object, TResponse>>>.Empty;
     }
 
-    private ImmutableDictionary<string, ImmutableList<IQuerySubscription>> GetSubscriptions()
-        => this.subscriptions.ToImmutableDictionary(s => s.Key, kv => kv.Value.Select(q => q).ToImmutableList());
+    private ImmutableDictionary<string, ImmutableList<IQuerySubscription>>
+        GetSubscriptions() =>
+        this.subscriptions
+            .ToImmutableDictionary(s => s.Key, kv => kv.Value.Select(q => q)
+                .ToImmutableList());
 
     private class Registration : IAsyncDisposable
     {
