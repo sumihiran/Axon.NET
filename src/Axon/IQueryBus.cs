@@ -17,14 +17,12 @@ public interface IQueryBus
     /// <param name="queryName">The name of the query to subscribe.</param>
     /// <param name="responseType">The type of response the subscribed component answers with.</param>
     /// <param name="handler">A handler that handles the query.</param>
-    /// <typeparam name="TMessage"><see cref="IQueryMessage{TPayload,TResponse}"/>.</typeparam>
     /// <typeparam name="TResponse">The response type.</typeparam>
     /// <returns>A <see cref="Task"/> containing a handle to un-subscribe the query handler.</returns>
-    Task<IAsyncDisposable> SubscribeAsync<TMessage, TResponse>(
+    public Task<IAsyncDisposable> SubscribeAsync<TResponse>(
         string queryName,
         Type responseType,
-        MessageHandler<TMessage> handler)
-        where TMessage : IQueryMessage<object, TResponse>
+        IMessageHandler<IQueryMessage<object, TResponse>> handler)
         where TResponse : class;
 
     /// <summary>

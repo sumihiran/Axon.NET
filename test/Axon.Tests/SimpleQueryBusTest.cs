@@ -11,20 +11,20 @@ public class SimpleQueryBusTest
         var sut = new SimpleQueryBus();
         var responseType = typeof(string);
 
-        await sut.SubscribeAsync("query-1", responseType, QueryHandler<string, string>(payload => payload.ToString()));
+        await sut.SubscribeAsync(
+            "query-1", responseType, QueryHandler<object, string>(payload => payload.ToString() ?? string.Empty));
 
         Assert.Single(sut.Subscriptions);
         Assert.Single(sut.Subscriptions.Values);
 
-        await sut.SubscribeAsync("query-1", QueryHandler<string, string>(payload => "prefix:" + payload.ToString()));
+        await sut.SubscribeAsync(
+            "query-1", responseType, QueryHandler<object, string>(payload => "prefix:" + payload));
 
         Assert.Single(sut.Subscriptions);
         Assert.Equal(2, sut.Subscriptions.Values.First().Count);
 
-        await sut.SubscribeAsync<IQueryMessage<string, string>, string>(
-            "query-2",
-            typeof(string),
-            QueryHandler<string, string>(payload => "prefix:" + payload.ToString()));
+        await sut.SubscribeAsync(
+            "query-2", typeof(string), QueryHandler<object, string>(payload => "prefix:" + payload));
 
         Assert.Equal(2, sut.Subscriptions.Count);
     }
@@ -35,16 +35,16 @@ public class SimpleQueryBusTest
         // Arrange
         IQueryBus sut = new SimpleQueryBus();
         var invocationCount = 0;
-        var handler = QueryHandler<string, object>(_ =>
+        var handler = QueryHandler<object, object>(_ =>
         {
             invocationCount++;
             return 9999;
         });
         var queryMessage =
-            new GenericQueryMessage<string, object>("request", "question", ResponseTypes.InstanceOf<object>());
+            new GenericQueryMessage<object, object>("request", "question", ResponseTypes.InstanceOf<object>());
 
         // Act
-        var registration = await sut.SubscribeAsync("question", handler);
+        var registration = await sut.SubscribeAsync("question", typeof(object), handler);
         var result = await sut.QueryAsync(queryMessage);
 
         // Assert
@@ -61,10 +61,11 @@ public class SimpleQueryBusTest
     {
         // Arrange
         var sut = new SimpleQueryBus();
-        await sut.SubscribeAsync(typeof(string).FullName!, QueryHandler<string, string>(_ => "expected"));
+        var queryName = typeof(string).FullName!;
+        await sut.SubscribeAsync(queryName, typeof(string), QueryHandler<object, string>(_ => "expected"));
 
-        await (await sut.SubscribeAsync(typeof(string).FullName!, QueryHandler<string, string>(_ => "not expected")))
-            .DisposeAsync();
+        await (await sut.SubscribeAsync(
+                queryName, typeof(string), QueryHandler<object, string>(_ => "not expected"))).DisposeAsync();
 
         var queryMessage =
             new GenericQueryMessage<string, string>("request", ResponseTypes.InstanceOf<string>());
@@ -96,9 +97,9 @@ public class SimpleQueryBusTest
         var queryName = typeof(string).FullName!;
 
         // Act
-        await sut.SubscribeAsync(queryName, QueryHandler<string, string>(_ => "AB"));
-        await sut.SubscribeAsync(queryName, QueryHandler<string, string>(_ => "NM"));
-        await sut.SubscribeAsync(queryName, QueryHandler<string, string>(_ => "XY"));
+        await sut.SubscribeAsync(queryName, typeof(string), QueryHandler<object, string>(_ => "AB"));
+        await sut.SubscribeAsync(queryName, typeof(string), QueryHandler<object, string>(_ => "NM"));
+        await sut.SubscribeAsync(queryName, typeof(string), QueryHandler<object, string>(_ => "XY"));
 
         var queryMessage =
             new GenericQueryMessage<string, string>("request", ResponseTypes.InstanceOf<string>());
@@ -121,8 +122,8 @@ public class SimpleQueryBusTest
         var queryName = typeof(string).FullName!;
 
         // Act
-        await sut.SubscribeAsync(queryName, QueryHandler<string, string>(_ => null!));
-        await sut.SubscribeAsync(queryName, QueryHandler<string, string>(_ => "answer"));
+        await sut.SubscribeAsync(queryName, typeof(string), QueryHandler<object, string>(_ => null!));
+        await sut.SubscribeAsync(queryName, typeof(string), QueryHandler<object, string>(_ => "answer"));
 
         var queryMessage =
             new GenericQueryMessage<string, string>("request", ResponseTypes.InstanceOf<string>());
@@ -135,13 +136,13 @@ public class SimpleQueryBusTest
         Assert.Contains("answer", results);
     }
 
-    private static MessageHandler<IQueryMessage<TPayload, TResponse>> QueryHandler<TPayload, TResponse>(
+    private static IMessageHandler<IQueryMessage<TPayload, TResponse>> QueryHandler<TPayload, TResponse>(
         Func<TPayload, TResponse> call)
         where TPayload : class
         where TResponse : class
         => new DelegatingQueryHandler<TPayload, TResponse>(call);
 
-    private class DelegatingQueryHandler<TPayload, TResponse> : MessageHandler<IQueryMessage<TPayload, TResponse>>
+    private class DelegatingQueryHandler<TPayload, TResponse> : IMessageHandler<IQueryMessage<TPayload, TResponse>>
         where TPayload : class
         where TResponse : class
     {
@@ -150,7 +151,7 @@ public class SimpleQueryBusTest
         public DelegatingQueryHandler(Func<TPayload, TResponse> call) => this.call = call;
 
         /// <inheritdoc />
-        public override Task<object?> HandleAsync(IQueryMessage<TPayload, TResponse> message) =>
-            Task.FromResult((object?)this.call.Invoke(message.Payload!));
+        public Task<object?> HandleAsync(IQueryMessage<TPayload, TResponse> message) =>
+            Task.FromResult((object?)this.call.Invoke(message.Payload));
     }
 }

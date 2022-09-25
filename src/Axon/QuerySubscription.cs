@@ -5,19 +5,25 @@ using Axon.Messaging.ResponseTypes;
 
 /// <summary>
 /// Encapsulates the identifying fields of a Query Handler when one is subscribed to the <see cref="IQueryBus"/>.
+/// As such contains the response type of the query handler and the complete handler itself. The first is typically used
+/// by the QueryBus to select the right query handler when a query comes in. The latter is used to perform the actual
+/// query.
 /// </summary>
-public class QuerySubscription : IEquatable<QuerySubscription>
+/// <typeparam name="TResponse">The type of response this query subscription contains.</typeparam>
+public class QuerySubscription<TResponse> :
+    IEquatable<QuerySubscription<TResponse>>, IQuerySubscription
+    where TResponse : class
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="QuerySubscription"/> class  with a specific
+    /// Initializes a new instance of the <see cref="QuerySubscription{TResponse}"/> class  with a specific
     /// <paramref name="responseType"/> and <paramref name="queryHandler"/>.
     /// </summary>
     /// <param name="responseType">This subscription's response <see cref="Type"/>.</param>
-    /// <param name="queryHandler">The subscribed <see cref="IMessageHandler"/>.</param>
-    public QuerySubscription(Type responseType, IMessageHandler queryHandler)
+    /// <param name="queryHandler">The subscribed <see cref="IMessageHandler{TMessage}"/>.</param>
+    public QuerySubscription(Type responseType, IMessageHandler<IQueryMessage<object, TResponse>> queryHandler)
     {
-        this.QueryHandler = queryHandler;
         this.ResponseType = responseType;
+        this.QueryHandler = queryHandler;
     }
 
     /// <summary>
@@ -25,22 +31,15 @@ public class QuerySubscription : IEquatable<QuerySubscription>
     /// </summary>
     public Type ResponseType { get; }
 
-    /// <summary>
-    /// Gets the query handler of this subscription as a <see cref="IMessageHandler"/>.
-    /// </summary>
-    public IMessageHandler QueryHandler { get; }
+    /// <inheritdoc/>
+    object IQuerySubscription.QueryHandler => this.QueryHandler;
 
     /// <summary>
-    /// Check if this <see cref="QuerySubscription"/> can handle the given <paramref name="queryResponseType"/>, by
-    /// calling the <see cref="IResponseType{TResponse}.Matches(Type)"/> function on it and providing the
-    /// <see cref="ResponseType"/> of this subscription.
+    /// Gets the query handler of this subscription as a <see cref="IMessageHandler{TMessage}"/>.
     /// </summary>
-    /// <param name="queryResponseType">The queryResponseType: a <see cref="IResponseType{TResponse}"/> to match this
-    /// subscriptions it's <see cref="ResponseType"/> against.</param>
-    /// <returns>
-    /// <c>true</c> if the given <paramref name="queryResponseType"/> its <see cref="IResponseType{TResponse}.Matches(Type)"/>
-    /// returns <c>true</c>, <c>false</c> if otherwise.
-    /// </returns>
+    public IMessageHandler<IQueryMessage<object, TResponse>> QueryHandler { get; }
+
+    /// <inheritdoc />
     public bool CanHandle(IResponseType<object> queryResponseType) => queryResponseType.Matches(this.ResponseType);
 
     /// <inheritdoc />
@@ -59,11 +58,11 @@ public class QuerySubscription : IEquatable<QuerySubscription>
             return true;
         }
 
-        return obj.GetType() == this.GetType() && this.Equals((QuerySubscription)obj);
+        return obj.GetType() == this.GetType() && this.Equals((QuerySubscription<TResponse>)obj);
     }
 
     /// <inheritdoc />
-    public bool Equals(QuerySubscription? other)
+    public bool Equals(QuerySubscription<TResponse>? other)
     {
         if (other is null)
         {

@@ -5,32 +5,37 @@ using Axon.Messaging;
 /// <summary>
 /// Represents a CommandHandler callback that is wrapped inside a message handler.
 /// </summary>
-internal class WrappedCommandHandlerCallback : MessageHandler<ICommandMessage<object>>,
-    IEquatable<WrappedCommandHandlerCallback>, IEquatable<MessageHandlerCallback<ICommandMessage<object>>>
+/// <typeparam name="TMessage">The message type this handler can process.</typeparam>
+internal class WrappedMessageHandlerCallback<TMessage> : IMessageHandler<TMessage>,
+    IEquatable<WrappedMessageHandlerCallback<TMessage>>, IEquatable<MessageHandlerCallback<TMessage>>
+    where TMessage : IMessage<object>
 {
-    private readonly MessageHandlerCallback<ICommandMessage<object>> callback;
+    private readonly MessageHandlerCallback<TMessage> callback;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="WrappedCommandHandlerCallback"/> class.
+    /// Initializes a new instance of the <see cref="WrappedMessageHandlerCallback{TMessage}"/> class.
     /// </summary>
     /// <param name="callback">The <see cref="MessageHandlerCallback{TMessage}"/>.</param>
-    public WrappedCommandHandlerCallback(MessageHandlerCallback<ICommandMessage<object>> callback) =>
+    public WrappedMessageHandlerCallback(MessageHandlerCallback<TMessage> callback) =>
         this.callback = callback;
 
     /// <inheritdoc />
-    public override Task<object?> HandleAsync(ICommandMessage<object> message) => this.callback(message);
+    public Task<object?> HandleAsync(TMessage message) => this.callback(message);
+
+    /// <inheritdoc />
+    public bool CanHandle(object message) => true;
 
     /// <summary>
     /// Returns the wrapped callback.
     /// </summary>
     /// <returns>The wrapped callback.</returns>
-    public MessageHandlerCallback<ICommandMessage<object>> Unwrap() => this.callback;
+    public MessageHandlerCallback<TMessage> Unwrap() => this.callback;
 
     /// <inheritdoc />
-    public bool Equals(MessageHandlerCallback<ICommandMessage<object>>? other) => this.callback.Equals(other);
+    public bool Equals(MessageHandlerCallback<TMessage>? other) => this.callback.Equals(other);
 
     /// <inheritdoc />
-    public bool Equals(WrappedCommandHandlerCallback? other)
+    public bool Equals(WrappedMessageHandlerCallback<TMessage>? other)
     {
         if (other is null)
         {
@@ -68,7 +73,7 @@ internal class WrappedCommandHandlerCallback : MessageHandler<ICommandMessage<ob
             return false;
         }
 
-        return this.Equals((WrappedCommandHandlerCallback)obj);
+        return this.Equals((WrappedMessageHandlerCallback<TMessage>)obj);
     }
 
     /// <inheritdoc />
