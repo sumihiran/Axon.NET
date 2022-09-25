@@ -1,0 +1,399 @@
+@startuml
+class QueryBusExtensions <<static>> {
+    + {static} SubscribeAsync(queryBus:IQueryBus, queryName:string, responseType:Type, handler:MessageHandlerCallback<IQueryMessage<object, TResponse>>) : Task<IRegistration>
+}
+class DuplicateCommandHandlerResolution <<static>> {
+    + {static} <<readonly>> SilentOverride : IDuplicateCommandHandlerResolver
+    - {static} SilentOverrideCallback : DuplicateCommandHandlerResolver <<get>>
+}
+class WrappedDuplicateCommandHandlerCallbackResolver {
+    - <<readonly>> duplicateResolver : DuplicateCommandHandlerResolver
+    + WrappedDuplicateCommandHandlerCallbackResolver(duplicateResolver:DuplicateCommandHandlerResolver)
+    + Resolve(commandName:string, registeredHandler:IMessageHandler<ICommandMessage<object>>, candidateHandler:IMessageHandler<ICommandMessage<object>>) : IMessageHandler<ICommandMessage<object>>
+}
+IDuplicateCommandHandlerResolver <|-- WrappedDuplicateCommandHandlerCallbackResolver
+class NoHandlerForQueryException {
+    + NoHandlerForQueryException(message:string)
+}
+Exception <|-- NoHandlerForQueryException
+interface IRegistration {
+    CancelAsync() : Task<bool>
+}
+IAsyncDisposable <|-- IRegistration
+interface "ISubscribableMessageSource`1"<TMessage> {
+    SubscribeAsync(messageProcessor:Func<List<TMessage>, Task>) : Task<IRegistration>
+}
+class CollectionExtensions <<static>> {
+    + {static} IsEmpty(items:ICollection<T>) : bool
+}
+class Registration {
+    - <<readonly>> cancelAction : Func<Task<bool>>
+    + Registration(cancelAction:Func<bool>)
+    + Registration(cancelAction:Func<Task<bool>>)
+    + CancelAsync() : Task<bool>
+    + <<async>> DisposeAsync() : ValueTask
+}
+IRegistration <|-- Registration
+interface IQuerySubscription {
+    ResponseType : Type <<get>>
+    QueryHandler : object <<get>>
+    CanHandle(queryResponseType:IResponseType<object>) : bool
+}
+class "WrappedMessageHandlerCallback`1"<TMessage> {
+    - <<readonly>> callback : MessageHandlerCallback<TMessage>
+    + WrappedMessageHandlerCallback(callback:MessageHandlerCallback<TMessage>)
+    + HandleAsync(message:TMessage) : Task<object?>
+    + CanHandle(message:object) : bool
+    + Unwrap() : MessageHandlerCallback<TMessage>
+    + Equals(other:MessageHandlerCallback<TMessage>?) : bool
+    + Equals(other:WrappedMessageHandlerCallback<TMessage>?) : bool
+    + <<override>> Equals(obj:object?) : bool
+    + <<override>> GetHashCode() : int
+}
+"IMessageHandler`1" "<TMessage>" <|-- "WrappedMessageHandlerCallback`1"
+"IEquatable`1" "<WrappedMessageHandlerCallback<TMessage>>" <|-- "WrappedMessageHandlerCallback`1"
+"IEquatable`1" "<MessageHandlerCallback<TMessage>>" <|-- "WrappedMessageHandlerCallback`1"
+class SimpleQueryBus {
+    - <<readonly>> subscriptions : ConcurrentDictionary<string, HashSet<IQuerySubscription>>
+    + Subscriptions : ImmutableDictionary<string, ImmutableList<IQuerySubscription>> <<get>>
+    + SubscribeAsync(queryName:string, responseType:Type, handler:IMessageHandler<IQueryMessage<object, TResponse>>) : Task<IRegistration>
+    + <<async>> QueryAsync(query:IQueryMessage<TQuery, TResponse>) : Task<IQueryResponseMessage<TResponse>>
+    + <<async>> ScatterGatherAsync(query:IQueryMessage<TQuery, TResponse>) : IAsyncEnumerable<IQueryResponseMessage<TResponse>>
+    - {static} ConvertResponse(response:object?, responseType:IResponseType<TResponse>) : TResponse?
+    - Unsubscribe(queryName:string, querySubscription:IQuerySubscription) : bool
+    - GetHandlersForMessage(queryMessage:IQueryMessage<object, TResponse>) : ImmutableList<IMessageHandler<IQueryMessage<object, TResponse>>>
+    - GetSubscriptions() : ImmutableDictionary<string, ImmutableList<IQuerySubscription>>
+}
+IQueryBus <|-- SimpleQueryBus
+class SimpleEventBus {
+    - <<readonly>> eventProcessors : ConcurrentDictionary<int, Func<List<IEventMessage<object>>, Task>>
+    + SubscribeAsync(messageProcessor:Func<List<IEventMessage<object>>, Task>) : Task<IRegistration>
+    + PublishAsync(events:IEventMessage<object>[]) : Task
+    + PublishAsync(events:List<IEventMessage<object>>) : Task
+    # <<virtual>> <<async>> ProcessEventsAsync(events:List<IEventMessage<object>>) : Task
+}
+IEventBus <|-- SimpleEventBus
+class NoOpCallback <<static>> {
+    + {static} Instance : CommandCallback<object, object> <<get>>
+    + {static} OnResultAsync(commandMessage:ICommandMessage<object>, commandResultMessage:ICommandResultMessage<object>) : Task
+}
+class DuplicateCommandHandlerResolverExtensions <<static>> {
+    + {static} Wrap(resolverCallback:DuplicateCommandHandlerResolver) : IDuplicateCommandHandlerResolver
+}
+interface ICommandBus {
+    DispatchAsync(command:ICommandMessage<object>) : Task<ICommandResultMessage<TResult>>
+    DispatchAsync(command:ICommandMessage<object>) : Task
+    SubscribeAsync(commandName:string, handler:IMessageHandler<ICommandMessage<object>>) : Task<IRegistration>
+}
+interface IDuplicateCommandHandlerResolver {
+    Resolve(commandName:string, registeredHandler:IMessageHandler<ICommandMessage<object>>, candidateHandler:IMessageHandler<ICommandMessage<object>>) : IMessageHandler<ICommandMessage<object>>
+}
+interface IEventBus {
+    PublishAsync(events:IEventMessage<object>[]) : Task
+    PublishAsync(events:List<IEventMessage<object>>) : Task
+}
+"ISubscribableMessageSource`1" "<IEventMessage<object>>" <|-- IEventBus
+class CommandBusExtensions <<static>> {
+    + {static} SubscribeAsync(commandBus:ICommandBus, commandName:string, handler:MessageHandlerCallback<ICommandMessage<object>>) : Task<IRegistration>
+}
+interface IQueryBus {
+    SubscribeAsync(queryName:string, responseType:Type, handler:IMessageHandler<IQueryMessage<object, TResponse>>) : Task<IRegistration>
+    QueryAsync(query:IQueryMessage<TQuery, TResponse>) : Task<IQueryResponseMessage<TResponse>>
+    ScatterGatherAsync(query:IQueryMessage<TQuery, TResponse>) : IAsyncEnumerable<IQueryResponseMessage<TResponse>>
+}
+class NoHandlerForCommandException <<sealed>> {
+    + NoHandlerForCommandException(message:string)
+    + NoHandlerForCommandException(commandMessage:object)
+}
+Exception <|-- NoHandlerForCommandException
+class SimpleCommandBus {
+    - <<readonly>> subscriptions : ConcurrentDictionary<string, IMessageHandler<ICommandMessage<object>>>
+    - <<readonly>> duplicateCommandHandlerResolver : IDuplicateCommandHandlerResolver
+    - <<readonly>> defaultCommandCallback : CommandCallback<object, object>
+    # SimpleCommandBus(builder:Builder)
+    + <<async>> DispatchAsync(command:ICommandMessage<object>) : Task<ICommandResultMessage<TResult>>
+    + <<async>> DispatchAsync(command:ICommandMessage<object>) : Task
+    + SubscribeAsync(commandName:string, handler:IMessageHandler<ICommandMessage<object>>) : Task<IRegistration>
+    # <<virtual>> <<async>> HandleAsync(command:ICommandMessage<object>, handler:IMessageHandler<ICommandMessage<object>>) : Task<IResultMessage<TResult>>
+    - FindCommandHandlerFor(commandName:string) : IMessageHandler<ICommandMessage<object>>?
+}
+class Builder {
+    <<internal>> DuplicateCommandHandlerResolver : IDuplicateCommandHandlerResolver <<get>>
+    <<internal>> DefaultCommandCallback : CommandCallback<object, object> <<get>>
+    + WithDuplicateCommandHandlerResolver(duplicateCommandHandlerResolver:IDuplicateCommandHandlerResolver) : Builder
+    + WithDuplicateCommandHandlerResolver(duplicateCommandHandlerResolver:DuplicateCommandHandlerResolver) : Builder
+    + WithDefaultCommandCallback(defaultCommandCallback:CommandCallback<object, object>) : Builder
+    + Build() : SimpleCommandBus
+}
+ICommandBus <|-- SimpleCommandBus
+SimpleCommandBus +-- Builder
+class "QuerySubscription`1"<TResponse> {
+    + QuerySubscription(responseType:Type, queryHandler:IMessageHandler<IQueryMessage<object, TResponse>>)
+    + ResponseType : Type <<get>>
+    QueryHandler : object <<get>>
+    + QueryHandler : IMessageHandler<IQueryMessage<object, TResponse>> <<get>>
+    + CanHandle(queryResponseType:IResponseType<object>) : bool
+    + <<override>> GetHashCode() : int
+    + <<override>> Equals(obj:object?) : bool
+    + Equals(other:QuerySubscription<TResponse>?) : bool
+}
+"IEquatable`1" "<QuerySubscription<TResponse>>" <|-- "QuerySubscription`1"
+IQuerySubscription <|-- "QuerySubscription`1"
+interface "IMessageHandler`1"<in TMessage> {
+    HandleAsync(message:TMessage) : Task<object?>
+    + CanHandle(message:object) : bool
+}
+interface "IMessage`1"<out TPayload> {
+    Identifier : string <<get>>
+    MetaData : MetaData <<get>>
+    Payload : TPayload? <<get>>
+    PayloadType : Type <<get>>
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+}
+class "GenericQueryResponseMessage`1"<TResult> {
+    + GenericQueryResponseMessage()
+    + GenericQueryResponseMessage(result:TResult)
+    + GenericQueryResponseMessage(declaredResultType:Type, result:TResult?)
+    + GenericQueryResponseMessage(declaredResultType:Type, exception:Exception)
+    + GenericQueryResponseMessage(result:TResult, metaData:MetaData)
+    + GenericQueryResponseMessage(declaredResultType:Type, result:TResult?, metaData:MetaData)
+    + GenericQueryResponseMessage(declaredResultType:Type, exception:Exception, metaData:MetaData)
+    + GenericQueryResponseMessage(message:IMessage<TResult>)
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IQueryResponseMessage<TResult>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IQueryResponseMessage<TResult>
+    + <<override>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericQueryResponseMessage<TResult>
+    + <<override>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericQueryResponseMessage<TResult>
+}
+"GenericResultMessage`1" "<TResult>" <|-- "GenericQueryResponseMessage`1"
+"IQueryResponseMessage`1" "<TResult>" <|-- "GenericQueryResponseMessage`1"
+class GenericEventMessage <<static>> {
+    + {static} <<readonly>> SystemTimestampSupplier : Func<DateTime>
+    + {static} AsEventMessage(eventMessage:TMessage, timestampSupplier:Func<DateTime>?) : IEventMessage<TMessage>
+    + {static} AsEventMessage(eventMessage:object, timestampSupplier:Func<DateTime>?) : IEventMessage<TMessage>
+}
+interface "IQueryMessage`2"<out TPayload,out TResponse> {
+    Payload : TPayload <<get>>
+    <<new>> Payload : TPayload <<get>>
+    QueryName : string <<get>>
+    ResponseType : IResponseType<TResponse> <<get>>
+}
+"IMessage`1" "<TPayload>" <|-- "IQueryMessage`2"
+class GenericResultMessage {
+    + {static} AsResultMessage(result:TPayload?) : IResultMessage<TPayload>
+    + {static} AsResultMessage(result:object?) : IResultMessage<TPayload>
+    + {static} AsErrorResultMessage(exception:Exception) : IResultMessage<TPayload>
+    <<internal>> {static} FindResultException(message:IMessage<TPayload>) : Exception?
+}
+interface "IEventMessage`1"<out TPayload> {
+    Payload : TPayload <<get>>
+    <<new>> Payload : TPayload <<get>>
+    Timestamp : DateTime <<get>>
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+    <<new>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IEventMessage<TPayload>
+    <<new>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IEventMessage<TPayload>
+}
+"IMessage`1" "<TPayload>" <|-- "IEventMessage`1"
+class "GenericCommandMessage`1"<TPayload> {
+    + GenericCommandMessage(payload:TPayload)
+    + GenericCommandMessage(payload:TPayload, metaData:ICollection<KeyValuePair<string, object>>)
+    + GenericCommandMessage(message:IMessage<TPayload>, commandName:string)
+    + <<new>> Payload : TPayload <<get>>
+    + CommandName : string <<get>>
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : ICommandMessage<TPayload>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : ICommandMessage<TPayload>
+    + <<override>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericCommandMessage<TPayload>
+    + <<override>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericCommandMessage<TPayload>
+}
+"MessageDecorator`1" "<TPayload>" <|-- "GenericCommandMessage`1"
+"ICommandMessage`1" "<TPayload>" <|-- "GenericCommandMessage`1"
+interface "IResultMessage`1"<out TResult> {
+    IsSuccess : bool <<get>>
+    Exception : Exception? <<get>>
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TResult>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TResult>
+    <<new>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IResultMessage<TResult>
+    <<new>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IResultMessage<TResult>
+}
+"IMessage`1" "<TResult>" <|-- "IResultMessage`1"
+abstract class "MessageDecorator`1"<TPayload> {
+    + MessageDecorator(message:IMessage<TPayload>)
+    + Message : IMessage<TPayload> <<get>>
+    + Identifier : string <<get>>
+    + MetaData : MetaData <<get>>
+    + Payload : TPayload? <<get>>
+    + PayloadType : Type <<get>>
+    + {abstract} WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+    + {abstract} AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+}
+"IMessage`1" "<TPayload>" <|-- "MessageDecorator`1"
+class "GenericEventMessage`1"<TPayload> {
+    + GenericEventMessage(payload:TPayload)
+    + GenericEventMessage(payload:TPayload, metaData:ICollection<KeyValuePair<string, object>>)
+    + GenericEventMessage(message:IMessage<TPayload>)
+    + GenericEventMessage(message:IMessage<TPayload>, timestampSupplier:Func<DateTime>)
+    + <<new>> Payload : TPayload <<get>>
+    + Timestamp : DateTime <<get>>
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IEventMessage<TPayload>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IEventMessage<TPayload>
+    + <<override>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericEventMessage<TPayload>
+    + <<override>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericEventMessage<TPayload>
+}
+"MessageDecorator`1" "<TPayload>" <|-- "GenericEventMessage`1"
+"IEventMessage`1" "<TPayload>" <|-- "GenericEventMessage`1"
+class MetaData {
+    + {static} <<readonly>> EmptyInstance : MetaData
+    - <<readonly>> values : IReadOnlyDictionary<string, object>
+    + MetaData()
+    + MetaData(items:IEnumerable<KeyValuePair<string, object>>)
+    + Count : int <<get>>
+    + IsReadOnly : bool <<get>>
+    + IsEmpty : bool <<get>>
+    + Keys : IEnumerable<string> <<get>>
+    + Values : IEnumerable<object> <<get>>
+    + {static} From(metaDataEntries:ICollection<KeyValuePair<string, object>>) : MetaData
+    + {static} With(key:string, value:object) : MetaData
+    + And(key:string, value:object) : MetaData
+    + Add(item:KeyValuePair<string, object>) : void
+    + Clear() : void
+    + Contains(item:KeyValuePair<string, object>) : bool
+    + CopyTo(array:KeyValuePair<string, object>[], arrayIndex:int) : void
+    + Remove(item:KeyValuePair<string, object>) : bool
+    + ContainsKey(key:string) : bool
+    + TryGetValue(key:string, value:object) : bool
+    + GetEnumerator() : IEnumerator<KeyValuePair<string, object>>
+    GetEnumerator() : IEnumerator
+    + Equals(other:ICollection<KeyValuePair<string, object>>?) : bool
+    + <<override>> Equals(obj:object?) : bool
+    + <<override>> GetHashCode() : int
+    + MergedWith(additionalEntries:ICollection<KeyValuePair<string, object>>) : MetaData
+    # Equals(other:MetaData) : bool
+}
+"IReadOnlyDictionary`2" "<string,object>" <|-- MetaData
+"ICollection`1" "<KeyValuePair<string, object>>" <|-- MetaData
+"IEquatable`1" "<ICollection<KeyValuePair<string, object>>>" <|-- MetaData
+class "GenericCommandResultMessage`1"<TResult> {
+    + GenericCommandResultMessage(commandResult:TResult?)
+    + GenericCommandResultMessage(exception:Exception)
+    + GenericCommandResultMessage(commandResult:TResult?, metaData:MetaData)
+    + GenericCommandResultMessage(exception:Exception, metaData:MetaData)
+    + GenericCommandResultMessage(message:IMessage<TResult>)
+    + GenericCommandResultMessage(message:IMessage<TResult>, exception:Exception?)
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : ICommandResultMessage<TResult>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : ICommandResultMessage<TResult>
+    + <<override>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericCommandResultMessage<TResult>
+    + <<override>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericCommandResultMessage<TResult>
+}
+"GenericResultMessage`1" "<TResult>" <|-- "GenericCommandResultMessage`1"
+"ICommandResultMessage`1" "<TResult>" <|-- "GenericCommandResultMessage`1"
+interface "IQueryResponseMessage`1"<out TResult> {
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IResultMessage<TResult>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IResultMessage<TResult>
+    <<new>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IQueryResponseMessage<TResult>
+    <<new>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IQueryResponseMessage<TResult>
+}
+"IResultMessage`1" "<TResult>" <|-- "IQueryResponseMessage`1"
+class GenericCommandMessage <<static>> {
+    + {static} AsCommandMessage(command:TMessage) : ICommandMessage<TMessage>
+    + {static} AsCommandMessage(command:object) : ICommandMessage<TMessage>
+}
+class GenericCommandResultMessage {
+    + {static} AsCommandResultMessage(commandResult:object?) : ICommandResultMessage<TResult>
+    + {static} AsCommandResultErrorMessage(exception:TException) : ICommandResultMessage<TResult>
+}
+class "GenericResultMessage`1"<TPayload> {
+    + GenericResultMessage(result:TPayload?)
+    + GenericResultMessage(exception:Exception)
+    + GenericResultMessage(result:TPayload?, metaData:MetaData)
+    + GenericResultMessage(exception:Exception, metaData:MetaData)
+    + GenericResultMessage(message:IMessage<TPayload>)
+    + GenericResultMessage(message:IMessage<TPayload>, exception:Exception?)
+    + IsSuccess : bool <<get>>
+    + Exception : Exception? <<get>>
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IResultMessage<TPayload>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IResultMessage<TPayload>
+    + <<override>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericResultMessage<TPayload>
+    + <<override>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericResultMessage<TPayload>
+}
+"MessageDecorator`1" "<TPayload>" <|-- "GenericResultMessage`1"
+"IResultMessage`1" "<TPayload>" <|-- "GenericResultMessage`1"
+class "GenericMessage`1"<TPayload> {
+    + GenericMessage(payload:TPayload?)
+    + GenericMessage(payload:TPayload?, metaData:ICollection<KeyValuePair<string, object>>)
+    + GenericMessage(declaredPayloadType:Type, payload:TPayload?, metaData:ICollection<KeyValuePair<string, object>>)
+    + GenericMessage(identifier:string, payload:TPayload?, metaData:ICollection<KeyValuePair<string, object>>)
+    + GenericMessage(identifier:string, declaredPayloadType:Type, payload:TPayload?, metaData:ICollection<KeyValuePair<string, object>>)
+    - GenericMessage(original:GenericMessage<TPayload>, metaData:MetaData)
+    + <<override>> MetaData : MetaData <<get>>
+    + <<override>> Payload : TPayload? <<get>>
+    + <<override>> PayloadType : Type <<get>>
+    # <<override>> WithMetaData(metaData:MetaData) : GenericMessage<TPayload>
+}
+"AbstractMessage`1" "<TPayload>" <|-- "GenericMessage`1"
+class GenericQueryResponseMessage <<static>> {
+    + {static} AsResponseMessage(result:object) : IQueryResponseMessage<TResult>
+    + {static} AsNullableResponseMessage(declaredType:Type, result:object?) : IQueryResponseMessage<TResult>
+    + {static} AsResponseMessage(declaredType:Type, exception:Exception) : IQueryResponseMessage<TResult>
+}
+abstract class "AbstractMessage`1"<TPayload> {
+    # AbstractMessage(identifier:string)
+    + Identifier : string <<get>>
+    + {abstract} MetaData : MetaData <<get>>
+    + {abstract} Payload : TPayload? <<get>>
+    + {abstract} PayloadType : Type <<get>>
+    + WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+    + AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+    # {abstract} WithMetaData(metaData:MetaData) : IMessage<TPayload>
+}
+"IMessage`1" "<TPayload>" <|-- "AbstractMessage`1"
+interface "ICommandMessage`1"<out TPayload> {
+    CommandName : string <<get>>
+    Payload : TPayload <<get>>
+    <<new>> Payload : TPayload <<get>>
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IMessage<TPayload>
+    <<new>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : ICommandMessage<TPayload>
+    <<new>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : ICommandMessage<TPayload>
+}
+"IMessage`1" "<TPayload>" <|-- "ICommandMessage`1"
+class GenericMessage <<static>> {
+    + {static} AsMessage(payload:object?) : IMessage<object>
+    <<internal>> {static} GetDeclaredPayloadType(payload:TPayload?) : Type
+}
+interface "ICommandResultMessage`1"<out TResult> {
+    WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IResultMessage<TResult>
+    AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : IResultMessage<TResult>
+    <<new>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : ICommandResultMessage<TResult>
+    <<new>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : ICommandResultMessage<TResult>
+}
+"IResultMessage`1" "<TResult>" <|-- "ICommandResultMessage`1"
+class "GenericQueryMessage`2"<TPayload,TResponse> {
+    + GenericQueryMessage(payload:TPayload, responseType:IResponseType<TResponse>)
+    + GenericQueryMessage(payload:TPayload, queryName:string, responseType:IResponseType<TResponse>)
+    + GenericQueryMessage(message:IMessage<TPayload>, queryName:string, responseType:IResponseType<TResponse>)
+    + <<new>> Payload : TPayload <<get>>
+    + QueryName : string <<get>>
+    + ResponseType : IResponseType<TResponse> <<get>>
+    + <<override>> WithMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericQueryMessage<TPayload, TResponse>
+    + <<override>> AndMetaData(metaData:ICollection<KeyValuePair<string, object>>) : GenericQueryMessage<TPayload, TResponse>
+}
+"MessageDecorator`1" "<TPayload>" <|-- "GenericQueryMessage`2"
+"IQueryMessage`2" "<TPayload,TResponse>" <|-- "GenericQueryMessage`2"
+interface "IResponseType`1"<out TResponse> {
+    ResponseMessagePayloadType : Type <<get>>
+    ExpectedResponseType : Type <<get>>
+    Matches(responseType:Type) : bool
+    + Convert(response:object?) : TResponse?
+}
+class "InstanceResponseType`1"<TResponse> {
+    + ResponseMessagePayloadType : Type <<get>>
+    + ExpectedResponseType : Type <<get>>
+    + Matches(responseType:Type) : bool
+    + <<override>> ToString() : string
+}
+"IResponseType`1" "<TResponse>" <|-- "InstanceResponseType`1"
+class ResponseTypes <<static>> {
+    + {static} InstanceOf() : IResponseType<TResponse>
+}
+@enduml
