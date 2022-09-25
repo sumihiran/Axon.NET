@@ -1,5 +1,6 @@
 namespace Axon;
 
+using System.Diagnostics.CodeAnalysis;
 using Axon.Messaging;
 
 /// <summary>
@@ -21,3 +22,19 @@ public delegate IMessageHandler<ICommandMessage<object>> DuplicateCommandHandler
     string commandName,
     IMessageHandler<ICommandMessage<object>> registeredHandler,
     IMessageHandler<ICommandMessage<object>> candidateHandler);
+
+/// <summary>
+/// DuplicateCommandHandlerResolver extensions.
+/// </summary>
+[SuppressMessage("ReSharper", "SA1649:FileNameMustMatchTypeName", Justification = "Delegate extensions")]
+public static class DuplicateCommandHandlerResolverExtensions
+{
+    /// <summary>
+    /// Wraps the <see cref="DuplicateCommandHandlerResolver"/> inside a
+    /// <see cref="WrappedDuplicateCommandHandlerCallbackResolver"/> instance.
+    /// </summary>
+    /// <param name="resolverCallback">The <see cref="DuplicateCommandHandlerResolver"/>.</param>
+    /// <returns>A wrapped <see cref="DuplicateCommandHandlerResolver"/>.</returns>
+    public static IDuplicateCommandHandlerResolver Wrap(this DuplicateCommandHandlerResolver resolverCallback)
+        => new WrappedDuplicateCommandHandlerCallbackResolver(resolverCallback);
+}
