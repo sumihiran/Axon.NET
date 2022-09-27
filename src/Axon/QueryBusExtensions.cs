@@ -9,7 +9,8 @@ public static class QueryBusExtensions
 {
     /// <summary>
     /// Subscribe the given <paramref name="handler"/> to queries with the given <paramref name="queryName"/> and
-    /// <paramref name="responseType"/>. Multiple handlers may subscribe to the same combination of queryName/responseType.
+    /// <paramref name="responseType"/>. Multiple handlers may subscribe to the same combination of
+    /// queryName/responseType.
     /// </summary>
     /// <param name="queryBus">The queryBus.</param>
     /// <param name="queryName">The name of the query to subscribe.</param>

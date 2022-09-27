@@ -10,7 +10,7 @@ using Axon.Messaging.ResponseTypes;
 /// </summary>
 public class SimpleQueryBus : IQueryBus
 {
-    private readonly ConcurrentDictionary<string, HashSet<IQuerySubscription>> subscriptions = new();
+    private readonly ConcurrentDictionary<string, ConcurrentHashSet<IQuerySubscription>> subscriptions = new();
 
     /// <summary>
     /// Gets the subscriptions for this query bus. While the returned dictionary is unmodifiable, it may or may not
@@ -28,14 +28,11 @@ public class SimpleQueryBus : IQueryBus
         var querySubscription = new QuerySubscription<TResponse>(responseType, handler);
         _ = this.subscriptions.AddOrUpdate(
             queryName,
-            _ => new HashSet<IQuerySubscription> { querySubscription },
+            _ => new ConcurrentHashSet<IQuerySubscription> { querySubscription },
             (_, handlers) =>
             {
-                if (!handlers.Contains(querySubscription))
-                {
-                    handlers.Add(querySubscription);
-                }
-
+                // TODO: handler.TryAdd, handler.AddOrUpdate
+                handlers.Add(querySubscription);
                 return handlers;
             });
 
@@ -97,7 +94,7 @@ public class SimpleQueryBus : IQueryBus
     {
         if (this.subscriptions.TryGetValue(queryName, out var querySubscriptions))
         {
-            return querySubscriptions.Remove(querySubscription);
+            return querySubscriptions.TryRemove(querySubscription);
         }
 
         return false;
