@@ -113,14 +113,14 @@ public class SimpleCommandBus : ICommandBus
         /// Gets the <see cref="IDuplicateCommandHandlerResolver"/> used to resolves the road to take when a duplicate
         /// command handler is subscribed.
         /// </summary>
-        internal IDuplicateCommandHandlerResolver DuplicateCommandHandlerResolver { get; private set; } =
+        public IDuplicateCommandHandlerResolver DuplicateCommandHandlerResolver { get; private set; } =
             DuplicateCommandHandlerResolution.SilentOverride;
 
         /// <summary>
         /// Gets <see cref="CommandCallback{TPayload,TResult}"/> to use when commands are dispatched in a
         /// "fire and forget" method.
         /// </summary>
-        internal CommandCallback<object, object> DefaultCommandCallback { get; private set; }
+        public CommandCallback<object, object> DefaultCommandCallback { get; private set; }
             = NoOpCallback.Instance;
 
         /// <summary>
