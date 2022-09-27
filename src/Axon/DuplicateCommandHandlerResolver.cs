@@ -27,7 +27,7 @@ public delegate IMessageHandler<ICommandMessage<object>> DuplicateCommandHandler
 /// DuplicateCommandHandlerResolver extensions.
 /// </summary>
 [SuppressMessage("ReSharper", "SA1649:FileNameMustMatchTypeName", Justification = "Delegate extensions")]
-public static class DuplicateCommandHandlerResolverExtensions
+internal static class DuplicateCommandHandlerResolverExtensions
 {
     /// <summary>
     /// Wraps the <see cref="DuplicateCommandHandlerResolver"/> inside a
