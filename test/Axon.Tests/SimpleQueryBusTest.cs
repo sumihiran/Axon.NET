@@ -37,15 +37,16 @@ public class SimpleQueryBusTest
         var queryMessage =
             new GenericQueryMessage<string, string>("request", "question", ResponseTypes.InstanceOf<string>());
 
+        Task<object?> Handler(IQueryMessage<object, string> message)
+        {
+            invocationCount++;
+            return Task.FromResult<object?>("9999");
+        }
+
         // Act
-        var registration = await sut.SubscribeAsync(
-            "question",
-            typeof(string),
-            (IQueryMessage<object, string> _) =>
-            {
-                invocationCount++;
-                return Task.FromResult<object?>("9999");
-            });
+        var registration1 = await sut.SubscribeAsync<string>("question", typeof(string), Handler);
+        var registration2 = await sut.SubscribeAsync<string>("question", typeof(string), Handler);
+
         var result = await sut.QueryAsync(queryMessage);
 
         // Assert
@@ -53,7 +54,7 @@ public class SimpleQueryBusTest
         Assert.Equal("9999", result.Payload);
         Assert.Equal(1, invocationCount);
 
-        await registration.DisposeAsync();
+        await registration1.CancelAsync();
         await Assert.ThrowsAsync<NoHandlerForQueryException>(() => sut.QueryAsync(queryMessage));
     }
 
