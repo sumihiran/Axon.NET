@@ -13,4 +13,38 @@ public interface ICommandMessage<out TPayload> : IMessage<TPayload>
     /// parameter.
     /// </summary>
     string CommandName { get; }
+
+    /// <inheritdoc />
+    TPayload IMessage<TPayload>.Payload => this.Payload;
+
+    /// <summary>
+    /// Gets the payload of the command message.
+    /// </summary>
+    new TPayload Payload { get; }
+
+    /// <inheritdoc />
+    IMessage<TPayload> IMessage<TPayload>.WithMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
+        this.WithMetaData(metaData);
+
+    /// <inheritdoc />
+    IMessage<TPayload> IMessage<TPayload>.AndMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
+        this.AndMetaData(metaData);
+
+    /// <summary>
+    /// Returns a copy of this CommandMessage with the given <paramref name="metaData"/>. The payload remains unchanged.
+    /// <para/>
+    /// While the implementation returned may be different than the implementation of
+    /// <see cref="ICommandMessage{TPayload}"/>, implementations must take special care in returning the same type of
+    /// Message to prevent errors further downstream.
+    /// </summary>
+    /// <param name="metaData">The new MetaData for the Message.</param>
+    /// <returns>A copy of this message with the given MetaData.</returns>
+    new ICommandMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData);
+
+    /// <summary>
+    /// Returns a copy of this CommandMessage with it MetaData merged with the given. The payload remain unchanged.
+    /// </summary>
+    /// <param name="metaData">The MetaData to merge with.</param>
+    /// <returns>A copy of this message with the given MetaData.</returns>
+    new ICommandMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData);
 }

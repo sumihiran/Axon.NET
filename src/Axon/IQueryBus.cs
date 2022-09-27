@@ -17,23 +17,25 @@ public interface IQueryBus
     /// <param name="queryName">The name of the query to subscribe.</param>
     /// <param name="responseType">The type of response the subscribed component answers with.</param>
     /// <param name="handler">A handler that handles the query.</param>
-    /// <typeparam name="TMessage"><see cref="IQueryMessage{TPayload,TResponse}"/>.</typeparam>
     /// <typeparam name="TResponse">The response type.</typeparam>
     /// <returns>A <see cref="Task"/> containing a handle to un-subscribe the query handler.</returns>
-    Task<IAsyncDisposable> SubscribeAsync<TMessage, TResponse>(
+    Task<IRegistration> SubscribeAsync<TResponse>(
         string queryName,
         Type responseType,
-        MessageHandler<TMessage> handler)
-        where TMessage : IQueryMessage<object, TResponse>;
+        IMessageHandler<IQueryMessage<object, TResponse>> handler)
+        where TResponse : class;
 
     /// <summary>
     /// Dispatch the given <paramref name="query"/> to a single QueryHandler subscribed to the given
     /// <paramref name="query"/>'s queryName and responseType.
     /// </summary>
     /// <param name="query">The query.</param>
+    /// <typeparam name="TQuery">The type of the query.</typeparam>
     /// <typeparam name="TResponse">The type of response expected from this query.</typeparam>
     /// <returns>A <see cref="Task{TResult}"/>  that resolves when the response is available.</returns>
-    Task<TResponse?> QueryAsync<TResponse>(IQueryMessage<object, TResponse> query);
+    Task<IQueryResponseMessage<TResponse>> QueryAsync<TQuery, TResponse>(IQueryMessage<TQuery, TResponse> query)
+        where TQuery : class
+        where TResponse : class;
 
     /// <summary>
     /// Dispatch the given <paramref name="query"/> to all QueryHandlers subscribed matched with
@@ -43,10 +45,14 @@ public interface IQueryBus
     /// attempting to do so, the returned AsyncEnumerable is empty.
     /// </summary>
     /// <param name="query">The query.</param>
+    /// <typeparam name="TQuery">The type of the query.</typeparam>
     /// <typeparam name="TResponse">The response type of the query.</typeparam>
     /// <returns>An AsyncEnumerable of the query results.</returns>
     /// TODO: Add deadline
-    IAsyncEnumerable<TResponse?> ScatterGatherAsync<TResponse>(IQueryMessage<object, TResponse> query);
+    IAsyncEnumerable<IQueryResponseMessage<TResponse>> ScatterGatherAsync<TQuery, TResponse>(
+        IQueryMessage<TQuery, TResponse> query)
+        where TQuery : class
+        where TResponse : class;
 
     // TODO: Query Subscriptions
 }

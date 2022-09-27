@@ -9,6 +9,7 @@ using Axon.Messaging.ResponseTypes;
 /// <typeparam name="TResponse">The type of response expected from this query.</typeparam>
 public class GenericQueryMessage<TPayload, TResponse> : MessageDecorator<TPayload>, IQueryMessage<TPayload, TResponse>
     where TPayload : class
+    where TResponse : class
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="GenericQueryMessage{TPayload, TResponse}"/> class using the given
@@ -45,9 +46,16 @@ public class GenericQueryMessage<TPayload, TResponse> : MessageDecorator<TPayloa
     public GenericQueryMessage(IMessage<TPayload> message, string queryName, IResponseType<TResponse> responseType)
         : base(message)
     {
+        ArgumentNullException.ThrowIfNull(message.Payload, nameof(message.Payload));
+        this.Payload = message.Payload;
         this.QueryName = queryName;
         this.ResponseType = responseType;
     }
+
+    /// <summary>
+    /// Gets the payload of this event message.
+    /// </summary>
+    public new TPayload Payload { get; }
 
     /// <inheritdoc />
     public string QueryName { get; }
@@ -56,16 +64,12 @@ public class GenericQueryMessage<TPayload, TResponse> : MessageDecorator<TPayloa
     public IResponseType<TResponse> ResponseType { get; }
 
     /// <inheritdoc />
-    public override IMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
-        new GenericQueryMessage<TPayload, TResponse>(
-            this.Message.WithMetaData(metaData),
-            this.QueryName,
-            this.ResponseType);
+    public override GenericQueryMessage<TPayload, TResponse> WithMetaData(
+        ICollection<KeyValuePair<string, object>> metaData) =>
+        new(this.Message.WithMetaData(metaData), this.QueryName, this.ResponseType);
 
     /// <inheritdoc />
-    public override IMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
-        new GenericQueryMessage<TPayload, TResponse>(
-            this.Message.AndMetaData(metaData),
-            this.QueryName,
-            this.ResponseType);
+    public override GenericQueryMessage<TPayload, TResponse> AndMetaData(
+        ICollection<KeyValuePair<string, object>> metaData) =>
+        new(this.Message.AndMetaData(metaData), this.QueryName, this.ResponseType);
 }

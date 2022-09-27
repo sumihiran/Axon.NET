@@ -47,13 +47,32 @@ public class GenericEventMessage<TPayload> : MessageDecorator<TPayload>, IEventM
     /// <param name="message">The message containing payload, identifier and metadata.</param>
     /// <param name="timestampSupplier">Supplier for the timestamp of the Message creation.</param>
     public GenericEventMessage(IMessage<TPayload> message, Func<DateTime> timestampSupplier)
-        : base(message) => this.Timestamp = timestampSupplier();
+        : base(message)
+    {
+        ArgumentNullException.ThrowIfNull(message.Payload, nameof(message.Payload));
+        this.Payload = message.Payload;
+        this.Timestamp = timestampSupplier();
+    }
+
+    /// <summary>
+    /// Gets the payload of this event message.
+    /// </summary>
+    public new TPayload Payload { get; }
 
     /// <inheritdoc />
     public DateTime Timestamp { get; }
 
     /// <inheritdoc />
-    public override IMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData)
+    IEventMessage<TPayload> IEventMessage<TPayload>.
+        WithMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
+        this.WithMetaData(metaData);
+
+    /// <inheritdoc />
+    IEventMessage<TPayload> IEventMessage<TPayload>.AndMetaData(ICollection<KeyValuePair<string, object>> metaData) =>
+        this.AndMetaData(metaData);
+
+    /// <inheritdoc />
+    public override GenericEventMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData)
     {
         if (this.MetaData.Equals(metaData))
         {
@@ -64,7 +83,7 @@ public class GenericEventMessage<TPayload> : MessageDecorator<TPayload>, IEventM
     }
 
     /// <inheritdoc />
-    public override IMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData)
+    public override GenericEventMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData)
     {
         if (metaData.IsEmpty() || this.MetaData.Equals(metaData))
         {

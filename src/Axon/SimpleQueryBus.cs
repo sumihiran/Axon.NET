@@ -10,45 +10,40 @@ using Axon.Messaging.ResponseTypes;
 /// </summary>
 public class SimpleQueryBus : IQueryBus
 {
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, QuerySubscription>> subscriptions = new();
+    private readonly ConcurrentDictionary<string, ConcurrentHashSet<IQuerySubscription>> subscriptions = new();
 
     /// <summary>
     /// Gets the subscriptions for this query bus. While the returned dictionary is unmodifiable, it may or may not
     /// reflect changes made to the subscriptions after the call was made.
     /// </summary>
-    public ImmutableDictionary<string, ImmutableList<QuerySubscription>> Subscriptions => this.GetSubscriptions();
+    public ImmutableDictionary<string, ImmutableList<IQuerySubscription>> Subscriptions => this.GetSubscriptions();
 
     /// <inheritdoc />
-    public Task<IAsyncDisposable> SubscribeAsync<TMessage, TResponse>(
+    public Task<IRegistration> SubscribeAsync<TResponse>(
         string queryName,
         Type responseType,
-        MessageHandler<TMessage> handler)
-        where TMessage : IQueryMessage<object, TResponse>
+        IMessageHandler<IQueryMessage<object, TResponse>> handler)
+        where TResponse : class
     {
-        var querySubscription = new QuerySubscription(responseType, handler);
+        var querySubscription = new QuerySubscription<TResponse>(responseType, handler);
         _ = this.subscriptions.AddOrUpdate(
             queryName,
-            _ =>
-            {
-                var handlers = new ConcurrentDictionary<int, QuerySubscription>();
-                handlers.TryAdd(querySubscription.GetHashCode(), querySubscription);
-                return handlers;
-            },
+            _ => new ConcurrentHashSet<IQuerySubscription> { querySubscription },
             (_, handlers) =>
             {
-                handlers.AddOrUpdate(
-                    querySubscription.GetHashCode(),
-                    _ => querySubscription,
-                    (_, subscription) => subscription);
+                // TODO: handler.TryAdd, handler.AddOrUpdate
+                handlers.Add(querySubscription);
                 return handlers;
             });
 
-        return Task.FromResult(
-            (IAsyncDisposable)new Registration(() => this.Unsubscribe(queryName, querySubscription)));
+        return Task.FromResult<IRegistration>(new Registration(() => this.Unsubscribe(queryName, querySubscription)));
     }
 
     /// <inheritdoc />
-    public async Task<TResponse?> QueryAsync<TResponse>(IQueryMessage<object, TResponse> query)
+    public async Task<IQueryResponseMessage<TResponse>> QueryAsync<TQuery, TResponse>(
+        IQueryMessage<TQuery, TResponse> query)
+        where TQuery : class
+        where TResponse : class
     {
         var handlers = this.GetHandlersForMessage(query);
         if (handlers.IsEmpty)
@@ -59,11 +54,17 @@ public class SimpleQueryBus : IQueryBus
 
         var handler = handlers.First();
 
-        return ConvertResponse(await handler.HandleAsync(query).ConfigureAwait(false), query.ResponseType);
+        var result = ConvertResponse(await handler.HandleAsync(query).ConfigureAwait(false), query.ResponseType);
+
+        return GenericQueryResponseMessage.AsNullableResponseMessage<TResponse>(
+            query.ResponseType.ResponseMessagePayloadType, result);
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<TResponse?> ScatterGatherAsync<TResponse>(IQueryMessage<object, TResponse> query)
+    public async IAsyncEnumerable<IQueryResponseMessage<TResponse>> ScatterGatherAsync<TQuery, TResponse>(
+        IQueryMessage<TQuery, TResponse> query)
+        where TQuery : class
+        where TResponse : class
     {
         var handlers = this.GetHandlersForMessage(query);
         if (handlers.IsEmpty)
@@ -73,51 +74,53 @@ public class SimpleQueryBus : IQueryBus
 
         foreach (var handler in handlers)
         {
-            yield return ConvertResponse(await handler.HandleAsync(query).ConfigureAwait(false), query.ResponseType);
+            var result = ConvertResponse(await handler.HandleAsync(query).ConfigureAwait(false), query.ResponseType);
+
+            if (result is null)
+            {
+                continue;
+            }
+
+            // TODO: Add default QueryHandler Error callback
+            yield return GenericQueryResponseMessage.AsNullableResponseMessage<TResponse>(
+                query.ResponseType.ResponseMessagePayloadType, result);
         }
     }
 
     private static TResponse? ConvertResponse<TResponse>(object? response, IResponseType<TResponse> responseType)
         => responseType.Convert(response);
 
-    private void Unsubscribe(string queryName, QuerySubscription querySubscription)
+    private bool Unsubscribe(string queryName, IQuerySubscription querySubscription)
     {
         if (this.subscriptions.TryGetValue(queryName, out var querySubscriptions))
         {
-            querySubscriptions.TryRemove(
-                new KeyValuePair<int, QuerySubscription>(querySubscription.GetHashCode(), querySubscription));
+            return querySubscriptions.TryRemove(querySubscription);
         }
+
+        return false;
     }
 
-    private ImmutableList<IMessageHandler> GetHandlersForMessage<TResponse>(
+    private ImmutableList<IMessageHandler<IQueryMessage<object, TResponse>>> GetHandlersForMessage<TResponse>(
         IQueryMessage<object, TResponse> queryMessage)
+        where TResponse : class
     {
         var responseType = queryMessage.ResponseType;
         if (this.subscriptions.TryGetValue(queryMessage.QueryName, out var querySubscriptions))
         {
-            return querySubscriptions.Values
-                .Where(querySubscription => responseType.Matches(querySubscription.ResponseType))
-                .Select(querySubscription => querySubscription.QueryHandler)
+            return querySubscriptions
+                .Select(querySubscription => querySubscription as QuerySubscription<TResponse>)
+                .Where(querySubscription => querySubscription is not null)
+                .Where(querySubscription => responseType.Matches(querySubscription!.ResponseType))
+                .Select(querySubscription => querySubscription!.QueryHandler)
                 .ToImmutableList();
         }
 
-        return ImmutableList<IMessageHandler>.Empty;
+        return ImmutableList<IMessageHandler<IQueryMessage<object, TResponse>>>.Empty;
     }
 
-    private ImmutableDictionary<string, ImmutableList<QuerySubscription>> GetSubscriptions() =>
-        this.subscriptions.ToImmutableDictionary(s => s.Key, kv => kv.Value.Values.ToImmutableList());
-
-    private class Registration : IAsyncDisposable
-    {
-        private readonly Action unsubscribeAction;
-
-        public Registration(Action unsubscribeAction) => this.unsubscribeAction = unsubscribeAction;
-
-        /// <inheritdoc />
-        public ValueTask DisposeAsync()
-        {
-            this.unsubscribeAction.Invoke();
-            return ValueTask.CompletedTask;
-        }
-    }
+    private ImmutableDictionary<string, ImmutableList<IQuerySubscription>>
+        GetSubscriptions() =>
+        this.subscriptions
+            .ToImmutableDictionary(s => s.Key, kv => kv.Value.Select(q => q)
+                .ToImmutableList());
 }

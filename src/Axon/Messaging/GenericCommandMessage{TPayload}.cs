@@ -35,17 +35,36 @@ public class GenericCommandMessage<TPayload> : MessageDecorator<TPayload>, IComm
     /// </summary>
     /// <param name="message">The message containing payload, identifier and metadata.</param>
     /// <param name="commandName">The name of the command.</param>
+    /// <exception cref="ArgumentNullException">Throws when message payload is null.</exception>
     public GenericCommandMessage(IMessage<TPayload> message, string commandName)
-        : base(message) => this.CommandName = commandName;
+        : base(message)
+    {
+        ArgumentNullException.ThrowIfNull(message.Payload, nameof(message.Payload));
+        this.Payload = message.Payload;
+        this.CommandName = commandName;
+    }
+
+    /// <summary>
+    /// Gets the payload of this command message.
+    /// </summary>
+    public new TPayload Payload { get; }
 
     /// <inheritdoc />
     public string CommandName { get; }
 
     /// <inheritdoc />
-    public override IMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData)
-        => new GenericCommandMessage<TPayload>(this.Message.WithMetaData(this.MetaData), this.CommandName);
+    ICommandMessage<TPayload> ICommandMessage<TPayload>.
+        WithMetaData(ICollection<KeyValuePair<string, object>> metaData) => this.WithMetaData(metaData);
 
     /// <inheritdoc />
-    public override IMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData)
-        => new GenericCommandMessage<TPayload>(this.Message.AndMetaData(this.MetaData), this.CommandName);
+    ICommandMessage<TPayload> ICommandMessage<TPayload>.
+        AndMetaData(ICollection<KeyValuePair<string, object>> metaData) => this.AndMetaData(metaData);
+
+    /// <inheritdoc />
+    public override GenericCommandMessage<TPayload> WithMetaData(ICollection<KeyValuePair<string, object>> metaData)
+        => new(this.Message.WithMetaData(this.MetaData), this.CommandName);
+
+    /// <inheritdoc />
+    public override GenericCommandMessage<TPayload> AndMetaData(ICollection<KeyValuePair<string, object>> metaData)
+        => new(this.Message.AndMetaData(this.MetaData), this.CommandName);
 }

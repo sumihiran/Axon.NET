@@ -9,9 +9,9 @@ public class SimpleEventBusTests
     private static readonly List<IEventMessage<object>> Events = new() { EventMessage };
 
     private readonly IEventBus eventBus = new SimpleEventBus();
-    private readonly Mock<Func<List<IEventMessage<object>>, Task>> listener1 = new();
-    private readonly Mock<Func<List<IEventMessage<object>>, Task>> listener2 = new();
-    private readonly Mock<Func<List<IEventMessage<object>>, Task>> listener3 = new();
+    private readonly Mock<MessageProcessor<IEventMessage<object>>> listener1 = new();
+    private readonly Mock<MessageProcessor<IEventMessage<object>>> listener2 = new();
+    private readonly Mock<MessageProcessor<IEventMessage<object>>> listener3 = new();
 
     [Fact]
     public async Task EventIsDispatchedToSubscribedListeners()

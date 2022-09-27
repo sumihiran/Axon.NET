@@ -14,5 +14,6 @@ public static class ResponseTypes
     /// <returns>
     /// A <see cref="IResponseType{TResponse}"/> specifying the desire to retrieve a single instance of type.
     /// </returns>
-    public static IResponseType<TResponse> InstanceOf<TResponse>() => new InstanceResponseType<TResponse>();
+    public static IResponseType<TResponse> InstanceOf<TResponse>()
+        where TResponse : class => new InstanceResponseType<TResponse>();
 }

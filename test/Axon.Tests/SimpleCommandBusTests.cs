@@ -9,13 +9,16 @@ public class SimpleCommandBusTests
     private static readonly ICommandMessage<object> Command =
         GenericCommandMessage.AsCommandMessage<object>(new object());
 
-    private static readonly Mock<MessageHandler<ICommandMessage<object>>> CommandHandlerMock =
+    private static readonly Mock<IMessageHandler<ICommandMessage<object>>> CommandHandlerMock =
         CreateCommandMessageHandlerMock();
 
     private static readonly Mock<IDuplicateCommandHandlerResolver> DuplicateCommandHandlerResolverMock = new();
-    private readonly ICommandBus commandBus = new SimpleCommandBus(DuplicateCommandHandlerResolverMock.Object);
 
-    private static MessageHandler<ICommandMessage<object>> CommandHandler => CommandHandlerMock.Object;
+    private readonly SimpleCommandBus commandBus = new SimpleCommandBus.Builder()
+        .WithDuplicateCommandHandlerResolver(DuplicateCommandHandlerResolverMock.Object)
+        .Build();
+
+    private static IMessageHandler<ICommandMessage<object>> CommandHandler => CommandHandlerMock.Object;
 
     private static string CommandName => Command.CommandName;
 
@@ -37,11 +40,10 @@ public class SimpleCommandBusTests
         // Act
         var registration = await this.commandBus.SubscribeAsync(CommandName, CommandHandler);
         await this.commandBus.DispatchAsync(Command);
-        await registration.DisposeAsync();
+        await registration.CancelAsync();
 
         var exception = await Assert
-            .ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.DispatchAsync(Command))
-            .ConfigureAwait(false);
+            .ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.DispatchAsync(Command));
 
         // Assert
         CommandHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Once);
@@ -54,14 +56,13 @@ public class SimpleCommandBusTests
         // Arrange
         CommandHandlerMock.Invocations.Clear();
 
-        var unsupportedHandlerMock = new Mock<MessageHandler<ICommandMessage<object>>>();
+        var unsupportedHandlerMock = new Mock<IMessageHandler<ICommandMessage<object>>>();
         unsupportedHandlerMock.Setup(_ => _.CanHandle(Command)).Returns(false);
 
         // Act
         await using var registration = await this.commandBus.SubscribeAsync(CommandName, unsupportedHandlerMock.Object);
         var exception = await Assert
-            .ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.DispatchAsync(Command))
-            .ConfigureAwait(false);
+            .ThrowsAsync<NoHandlerForCommandException>(() => this.commandBus.DispatchAsync(Command));
 
         // Assert
         CommandHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Never);
@@ -89,15 +90,68 @@ public class SimpleCommandBusTests
         // Arrange
         var command = GenericCommandMessage.AsCommandMessage(new Ping());
         var expectedResult = new Pong();
-        var pingCommandHandler = new PingCommandHandler(expectedResult);
 
         // Act
-        await using var registration = await this.commandBus.SubscribeAsync(command.CommandName, pingCommandHandler);
+        await using var registration =
+            await this.commandBus.SubscribeAsync(command.CommandName, _ => Task.FromResult((object?)expectedResult));
         var result = await this.commandBus.DispatchAsync<Pong>(command);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(expectedResult, result);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expectedResult, result.Payload);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_FireAndForget_Should_InvokeDefaultCallback()
+    {
+        // Arrange
+        var expectedResultPayload = new Pong();
+        ICommandMessage<object>? commandMessage = null;
+        ICommandResultMessage<object>? commandResultMessage = null;
+
+        var sut = new SimpleCommandBus.Builder()
+            .WithDefaultCommandCallback((message, resultMessage) =>
+            {
+                commandMessage = message;
+                commandResultMessage = resultMessage;
+                return Task.CompletedTask;
+            })
+            .Build();
+
+        Task<object?> Handler(ICommandMessage<object> command) => Task.FromResult<object?>(expectedResultPayload);
+
+        var command = GenericCommandMessage.AsCommandMessage(new Ping());
+
+        // Act
+        await using var registration = await sut.SubscribeAsync(command.CommandName, Handler);
+
+        await sut.DispatchAsync(command);
+
+        // Assert
+        Assert.NotNull(commandMessage);
+        Assert.NotNull(commandResultMessage);
+        Assert.Equal(command.Payload, commandMessage.Payload);
+        Assert.True(commandResultMessage.IsSuccess);
+        Assert.Equal(expectedResultPayload, commandResultMessage.Payload);
+    }
+
+    [Fact]
+    public async Task Should_ReturnResultWithException_When_HandlerThrowsException()
+    {
+        // Arrange
+        var sut = this.commandBus;
+        var expectedException = new ErrorException("fail");
+        Task<object?> FailHandler(ICommandMessage<object> commandMessage) => throw expectedException;
+
+        // Act
+        await using var registration = await sut.SubscribeAsync(CommandName, FailHandler);
+        var result = await sut.DispatchAsync<object>(Command);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.IsSuccess);
+        Assert.Equal(expectedException, result.Exception);
     }
 
     [Fact]
@@ -114,13 +168,13 @@ public class SimpleCommandBusTests
 
         // Act
         // Subscribe the initial handler
-        await this.commandBus.SubscribeAsync(CommandName, initialHandlerMock.Object).ConfigureAwait(false);
+        await this.commandBus.SubscribeAsync(CommandName, initialHandlerMock.Object);
 
         // Then, subscribe a duplicate
-        await this.commandBus.SubscribeAsync(CommandName, duplicateHandlerMock.Object).ConfigureAwait(false);
+        await this.commandBus.SubscribeAsync(CommandName, duplicateHandlerMock.Object);
 
         // And after sending a test command, it should be handled by the initial handler
-        await this.commandBus.DispatchAsync(Command).ConfigureAwait(false);
+        await this.commandBus.DispatchAsync(Command);
 
         // Assert
         initialHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Once);
@@ -129,24 +183,57 @@ public class SimpleCommandBusTests
     }
 
     [Fact]
+    public async Task Should_InvokeDuplicateCommandHandlerResolverCallback_When_DuplicateCommandHandlerSubscribed()
+    {
+        // Arrange
+        var invocations = 0;
+
+        IMessageHandler<ICommandMessage<object>> DuplicateHandlerCallback(
+            string s,
+            IMessageHandler<ICommandMessage<object>> registeredHandler,
+            IMessageHandler<ICommandMessage<object>> messageHandler)
+        {
+            invocations++;
+            return registeredHandler;
+        }
+
+        var sut = new SimpleCommandBus.Builder().WithDuplicateCommandHandlerResolver(DuplicateHandlerCallback).Build();
+
+        var initialHandlerMock = new Mock<MessageHandlerCallback<ICommandMessage<object>>>();
+        var duplicateHandlerMock = new Mock<MessageHandlerCallback<ICommandMessage<object>>>();
+
+        // Act
+        // Subscribe the initial handler
+        await sut.SubscribeAsync(CommandName, initialHandlerMock.Object);
+
+        // Then, subscribe a duplicate
+        await sut.SubscribeAsync(CommandName, duplicateHandlerMock.Object);
+
+        // And after sending a test command, it should be handled by the initial handler
+        await sut.DispatchAsync(Command);
+
+        // Assert
+        Assert.Equal(1, invocations);
+        initialHandlerMock.Verify(_ => _(Command), Times.Once);
+    }
+
+    [Fact]
     public async Task Should_InvokeExpectedHandler_When_DuplicateCommandHandlerSubscribed()
     {
         // Arrange
-        DuplicateCommandHandlerResolverMock.Reset();
         var initialHandlerMock = CreateCommandMessageHandlerMock();
         var duplicateHandlerMock = CreateCommandMessageHandlerMock();
         var expectedHandlerMock = CreateCommandMessageHandlerMock();
-
-        DuplicateCommandHandlerResolverMock
-            .Setup(r => r.Resolve(CommandName, initialHandlerMock.Object, duplicateHandlerMock.Object))
-            .Returns(expectedHandlerMock.Object);
+        var sut = new SimpleCommandBus.Builder()
+            .WithDuplicateCommandHandlerResolver((_, registered, candidateHandler) => expectedHandlerMock.Object)
+            .Build();
 
         // Act
-        await this.commandBus.SubscribeAsync(CommandName, initialHandlerMock.Object).ConfigureAwait(false);
-        await this.commandBus.SubscribeAsync(CommandName, duplicateHandlerMock.Object).ConfigureAwait(false);
+        await sut.SubscribeAsync(CommandName, initialHandlerMock.Object);
+        await sut.SubscribeAsync(CommandName, duplicateHandlerMock.Object);
 
         // And after sending a test command, it should be handled by the expected handler
-        await this.commandBus.DispatchAsync(Command).ConfigureAwait(false);
+        await sut.DispatchAsync(Command);
 
         // Assert
         initialHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Never);
@@ -154,7 +241,7 @@ public class SimpleCommandBusTests
         expectedHandlerMock.Verify(_ => _.HandleAsync(Command), Times.Once);
     }
 
-    private static Mock<MessageHandler<ICommandMessage<object>>> CreateCommandMessageHandlerMock() =>
+    private static Mock<IMessageHandler<ICommandMessage<object>>> CreateCommandMessageHandlerMock() =>
         new() { CallBase = true };
 
     private record Ping;
@@ -163,14 +250,11 @@ public class SimpleCommandBusTests
     {
     }
 
-    private class PingCommandHandler : MessageHandler<ICommandMessage<Ping>>
+    private class ErrorException : Exception
     {
-        private readonly Pong response;
-
-        public PingCommandHandler(Pong response) => this.response = response;
-
-        /// <inheritdoc />
-        public override Task<object?> HandleAsync(ICommandMessage<Ping> message) =>
-            Task.FromResult((object?)this.response);
+        public ErrorException(string? message)
+            : base(message)
+        {
+        }
     }
 }

@@ -92,6 +92,6 @@ public class GenericMessage<TPayload> : AbstractMessage<TPayload>
     public override Type PayloadType { get; }
 
     /// <inheritdoc />
-    protected override IMessage<TPayload> WithMetaData(MetaData metaData) =>
-        new GenericMessage<TPayload>(this, metaData);
+    protected override GenericMessage<TPayload> WithMetaData(MetaData metaData) =>
+        new(this, metaData);
 }

@@ -29,7 +29,7 @@ partial class Build : NukeBuild
     static AbsolutePath SourceDirectory => RootDirectory / "src";
     static AbsolutePath TestsDirectory => RootDirectory / "tests";
 
-    static AbsolutePath OutputDirectory => RootDirectory / "output";
+    static AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
 
     const string MainBranch = "main";
     const string DevelopBranch = "develop";
@@ -40,7 +40,7 @@ partial class Build : NukeBuild
         .Before(Restore)
         .Executes(() =>
         {
-            EnsureCleanDirectory(OutputDirectory);
+            EnsureCleanDirectory(ArtifactsDirectory);
             SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
             TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
         });
@@ -61,12 +61,13 @@ partial class Build : NukeBuild
             DotNetBuild(_ => _
                 .SetProjectFile(Solution)
                 .SetNoRestore(InvokedTargets.Contains(Restore))
-                .SetConfiguration(Configuration));
+                .SetConfiguration(Configuration)
+                .EnableNoLogo());
         });
 
-    static AbsolutePath TestResultDirectory => OutputDirectory / "test-results";
+    static AbsolutePath TestResultDirectory => ArtifactsDirectory / "test-results";
 
-    static AbsolutePath CoverageResultDirectory => OutputDirectory / "test-coverage";
+    static AbsolutePath CoverageResultDirectory => ArtifactsDirectory / "test-coverage";
     IEnumerable<Project> TestProjects => Partition.GetCurrent(Solution.GetProjects("*.Tests"));
 
     Target Test => _ => _
