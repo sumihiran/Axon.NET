@@ -26,7 +26,7 @@ public interface IEventBus : ISubscribableMessageSource<IEventMessage<object>>
     /// Implementations may treat the given <paramref name="events"/> as a single batch and distribute the events
     /// as such to all subscribed EventListeners.
     /// </summary>
-    /// <param name="events"> The collection of events to publish.</param>
+    /// <param name="events">The collection of events to publish.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task PublishAsync(List<IEventMessage<object>> events);
 }

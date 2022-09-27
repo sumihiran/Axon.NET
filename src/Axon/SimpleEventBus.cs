@@ -1,6 +1,6 @@
 namespace Axon;
 
-using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using Axon.Messaging;
 
 /// <summary>
@@ -8,16 +8,16 @@ using Axon.Messaging;
 /// </summary>
 public class SimpleEventBus : IEventBus
 {
-    private readonly ConcurrentDictionary<int, Func<List<IEventMessage<object>>, Task>> eventProcessors = new();
+    private readonly ConcurrentHashSet<MessageProcessor<IEventMessage<object>>> eventProcessors = new();
 
     /// <inheritdoc />
-    public Task<IRegistration> SubscribeAsync(Func<List<IEventMessage<object>>, Task> messageProcessor)
+    public Task<IRegistration> SubscribeAsync(MessageProcessor<IEventMessage<object>> messageProcessor)
     {
         // TODO: Log if subscriber is already added.
-        _ = this.eventProcessors.TryAdd(messageProcessor.GetHashCode(), messageProcessor);
+        _ = this.eventProcessors.Add(messageProcessor);
 
         return Task.FromResult<IRegistration>(new Registration(() =>
-            this.eventProcessors.Remove(messageProcessor.GetHashCode(), out _)));
+            this.eventProcessors.TryRemove(messageProcessor)));
     }
 
     /// <inheritdoc />
@@ -33,7 +33,7 @@ public class SimpleEventBus : IEventBus
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     protected virtual async Task ProcessEventsAsync(List<IEventMessage<object>> events)
     {
-        foreach (var eventProcessor in this.eventProcessors.Values.ToList())
+        foreach (var eventProcessor in this.eventProcessors.ToImmutableHashSet())
         {
             await eventProcessor(events).ConfigureAwait(true);
         }
