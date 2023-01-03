@@ -362,3 +362,6 @@ output/
 
 # SonarQube
 .sonarqube
+
+# Nuke
+.nuke/temp/
