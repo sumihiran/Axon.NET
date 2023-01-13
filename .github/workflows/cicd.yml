@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
 
       - name: Cache .nuke/temp, ~/.nuget/packages
         uses: actions/cache@v3
@@ -54,7 +54,7 @@ jobs:
 
     steps:
       - name: Setup .NET
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
 
       - name: Publish NuGet Package
         run: ./build.cmd Publish
