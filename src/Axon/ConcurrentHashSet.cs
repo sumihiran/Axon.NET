@@ -19,6 +19,7 @@ using System.Diagnostics.CodeAnalysis;
 /// concurrently from multiple threads.
 /// </remarks>
 [DebuggerDisplay("Count = {Count}")]
+[ExcludeFromCodeCoverage]
 [SuppressMessage("ReSharper", "SA1405:DebugAssertMustProvideMessageText", Justification = "Library")]
 internal class ConcurrentHashSet<T> : IReadOnlyCollection<T>, ICollection<T>
 {
