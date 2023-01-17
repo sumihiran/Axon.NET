@@ -77,5 +77,5 @@ internal class WrappedMessageHandlerCallback<TMessage> : IMessageHandler<TMessag
     }
 
     /// <inheritdoc />
-    public override int GetHashCode() => this.callback.GetHashCode();
+    public override int GetHashCode() => this.callback.GetMulticastDelegateHashCode();
 }
