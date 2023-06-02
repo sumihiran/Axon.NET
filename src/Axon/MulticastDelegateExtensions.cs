@@ -19,16 +19,17 @@ public static class MulticastDelegateExtensions
     /// <returns>The hash value.</returns>
     public static int GetMulticastDelegateHashCode(this MulticastDelegate @delegate)
     {
-        var hash = @delegate.GetType().GetHashCode();
+        HashCode hash = default;
+        hash.Add(@delegate.GetType());
         foreach (var d in @delegate.GetInvocationList())
         {
-            hash ^= d.Method.GetHashCode();
+            hash.Add(d.Method);
             if (d.Target is not null)
             {
-                hash ^= d.Target.GetHashCode();
+                hash.Add(d.Target);
             }
         }
 
-        return hash;
+        return hash.ToHashCode();
     }
 }
