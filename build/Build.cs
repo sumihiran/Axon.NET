@@ -8,10 +8,9 @@ using Nuke.Common.Utilities.Collections;
 using Nuke.Common.Git;
 using Nuke.Common.Tools.Coverlet;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
-using static Nuke.Common.IO.FileSystemTasks;
 
 [DisableDefaultOutput(DefaultOutput.Logo)]
-partial class Build : NukeBuild
+partial class Build
 {
     /// Support plugins are available for:
     ///   - JetBrains ReSharper        https://nuke.build/resharper
@@ -40,9 +39,9 @@ partial class Build : NukeBuild
         .Before(Restore)
         .Executes(() =>
         {
-            EnsureCleanDirectory(ArtifactsDirectory);
-            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
-            TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
+            ArtifactsDirectory.CreateOrCleanDirectory();
+            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(AbsolutePathExtensions.DeleteDirectory);
+            TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(AbsolutePathExtensions.DeleteDirectory);
         });
 
     Target Restore => _ => _
@@ -68,7 +67,7 @@ partial class Build : NukeBuild
     static AbsolutePath TestResultDirectory => ArtifactsDirectory / "test-results";
 
     static AbsolutePath CoverageResultDirectory => ArtifactsDirectory / "test-coverage";
-    IEnumerable<Project> TestProjects => Partition.GetCurrent(Solution.GetProjects("*.Tests"));
+    IEnumerable<Project> TestProjects => Partition.GetCurrent(Solution.GetAllProjects("*.Tests"));
 
     Target Test => _ => _
         .Description("Runs unit tests and outputs test results to the output directory.")
